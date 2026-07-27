@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/design-profile.schema.json",
+  "title": "Design Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "revision", "name", "modes", "themes"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "revision": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "modes": { "type": "array", "items": { "enum": ["reading", "workshop", "atlas"] } },
+    "themes": { "type": "array", "items": { "enum": ["paper", "night", "print"] } }
+  }
+}

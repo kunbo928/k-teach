@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/exercise.schema.json",
+  "title": "Exercise",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "prompt", "answer", "feedback"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "prompt": { "type": "string", "minLength": 1 },
+    "answer": { "type": "string", "minLength": 1 },
+    "feedback": { "type": "string", "minLength": 1 }
+  }
+}

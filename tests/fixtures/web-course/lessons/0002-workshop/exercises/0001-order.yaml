@@ -1,0 +1,5 @@
+schema_version: 1
+id: predict-basic-order
+prompt: 三行输出的顺序是什么？
+answer: 同步，微任务，定时器
+feedback: 同步代码先完成，随后处理微任务，最后进入定时器阶段。

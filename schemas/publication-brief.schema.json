@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/publication-brief.schema.json",
+  "title": "Publication Brief",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "revision", "lesson_id", "lesson_revision", "title", "audience", "angle", "include", "exclude", "theme", "author", "summary", "cover", "authorized_for_publication"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "revision": { "type": "string", "minLength": 1 },
+    "lesson_id": { "type": "string", "minLength": 1 },
+    "lesson_revision": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "audience": { "type": "string", "minLength": 1 },
+    "angle": { "type": "string", "minLength": 1 },
+    "include": { "type": "array", "items": { "type": "string" } },
+    "exclude": { "type": "array", "items": { "type": "string" } },
+    "theme": { "const": "field-manual" },
+    "author": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "cover": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": { "enum": ["generated", "visual-asset"] },
+        "asset_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "authorized_for_publication": { "type": "boolean" }
+  }
+}

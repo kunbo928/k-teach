@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/workspace.schema.json",
+  "title": "Learning Workspace configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "design_profile", "output_dir", "visuals"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "design_profile": { "type": "string", "minLength": 1 },
+    "output_dir": { "type": "string", "minLength": 1 },
+    "visuals": { "enum": ["auto", "required", "off"] },
+    "wechat_account": { "type": "string", "minLength": 1 }
+  }
+}

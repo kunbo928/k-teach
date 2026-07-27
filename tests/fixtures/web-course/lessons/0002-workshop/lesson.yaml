@@ -1,0 +1,12 @@
+schema_version: 1
+id: predict-queue-order
+revision: 2026-07-27T02:00:00Z
+title: 预测队列执行顺序
+mission: 在运行前预测一段异步代码的输出
+objectives:
+  - 识别同步任务、微任务和定时器
+sources:
+  - title: Node.js event loop guide
+    url: https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick
+composition: workshop
+visuals: "off"

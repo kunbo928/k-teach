@@ -1,0 +1,18 @@
+schema_version: 1
+id: <brief-id>
+revision: 2026-01-01T00:00:00Z
+lesson_id: <lesson-id>
+lesson_revision: <lesson-revision>
+title: <公众号文章标题，最多 32 个字>
+audience: <目标读者>
+angle: <文章角度>
+include:
+  - <要公开的二级标题>
+exclude:
+  - <明确排除的二级标题>
+theme: field-manual
+author: <署名，最多 16 个字>
+summary: <摘要，最多 120 个字>
+cover:
+  mode: generated
+authorized_for_publication: false

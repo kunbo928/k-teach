@@ -1,0 +1,16 @@
+schema_version: 1
+plan_id: <plan-id>
+asset_id: <asset-id>
+provider:
+  id: <provider-id>
+  model: <model-id>
+prompt: <exact prompt copied from the plan>
+input_references:
+  - lesson.md
+output_path: generated/<asset-id>.png
+media_type: image/png
+validation:
+  status: passed
+  checks:
+    - file-readable
+    - reviewed-against-purpose

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/visual-asset-record.schema.json",
+  "title": "Visual Asset Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan_id", "asset_id", "lesson_id", "lesson_revision", "kind", "purpose", "provider", "prompt", "input_references", "output_path", "media_type", "content_hash", "validation"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "plan_id": { "type": "string", "minLength": 1 },
+    "asset_id": { "type": "string", "minLength": 1 },
+    "lesson_id": { "type": "string", "minLength": 1 },
+    "lesson_revision": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["cover", "illustration", "comic", "infographic", "knowledge-card", "slides"] },
+    "purpose": { "type": "string", "minLength": 1 },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "model"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 }
+      }
+    },
+    "prompt": { "type": "string", "minLength": 1 },
+    "input_references": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "output_path": { "type": "string", "minLength": 1 },
+    "media_type": { "enum": ["image/png", "image/jpeg", "image/webp"] },
+    "content_hash": { "type": "string", "minLength": 1 },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checks"],
+      "properties": {
+        "status": { "const": "passed" },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

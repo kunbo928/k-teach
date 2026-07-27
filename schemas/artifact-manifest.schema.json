@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/artifact-manifest.schema.json",
+  "title": "Artifact Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "lesson_id", "lesson_revision", "design_profile_revision", "channel", "input_hash", "files", "capabilities_used", "warnings"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "lesson_id": { "type": "string", "minLength": 1 },
+    "lesson_revision": { "type": "string", "minLength": 1 },
+    "design_profile_revision": { "type": "string", "minLength": 1 },
+    "channel": { "enum": ["web", "wechat"] },
+    "input_hash": { "type": "string", "minLength": 1 },
+    "files": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "capabilities_used": { "type": "array", "items": { "type": "string" } },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  }
+}

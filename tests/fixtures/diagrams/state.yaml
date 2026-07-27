@@ -1,0 +1,23 @@
+schema_version: 1
+id: publication-state
+title: 发布状态
+description: 微信公众号发布尝试的主要状态。
+kind: state
+direction: left-to-right
+nodes:
+  - id: prepared
+    label: 已准备
+    role: start
+  - id: draft
+    label: 草稿已创建
+    role: state
+  - id: published
+    label: 已发布
+    role: end
+edges:
+  - from: prepared
+    to: draft
+    label: 创建草稿
+  - from: draft
+    to: published
+    label: 确认发布

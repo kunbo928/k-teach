@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/wechat-artifact-manifest.schema.json",
+  "title": "WeChat Artifact Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "kind", "channel", "generator", "generated_at", "lesson", "design_profile", "publication_brief", "article", "input_hash", "input_sources", "files", "media", "capabilities_used", "warnings", "validation", "publication_eligibility"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "kind": { "const": "wechat-article" },
+    "channel": { "const": "wechat" },
+    "generator": { "const": "k-teach-wechat-v1" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "lesson": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "revision": { "type": "string", "minLength": 1 }
+      }
+    },
+    "design_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision"],
+      "properties": {
+        "id": { "const": "field-manual" },
+        "revision": { "const": "1" }
+      }
+    },
+    "publication_brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision", "authorized_for_publication"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "revision": { "type": "string", "minLength": 1 },
+        "authorized_for_publication": { "type": "boolean" }
+      }
+    },
+    "article": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "author", "digest"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "author": { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "minLength": 1 }
+      }
+    },
+    "input_hash": { "type": "string", "minLength": 1 },
+    "input_sources": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "source", "file", "content_hash"],
+        "properties": {
+          "kind": { "enum": ["cover", "content-image", "diagram", "visual-asset"] },
+          "placeholder": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "minLength": 1 },
+          "file": { "type": "string", "minLength": 1 },
+          "content_hash": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "capabilities_used": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["errors", "warnings", "eligible_for_draft"],
+      "properties": {
+        "errors": { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "eligible_for_draft": { "type": "boolean" }
+      }
+    },
+    "publication_eligibility": { "type": "boolean" }
+  }
+}

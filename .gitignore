@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Local Learning Workspace runtime output
+.k-teach/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and caches
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.cache/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo

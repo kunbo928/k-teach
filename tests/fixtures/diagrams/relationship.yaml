@@ -1,0 +1,26 @@
+schema_version: 1
+id: lesson-relationship
+title: 课程内容关系
+description: Lesson Bundle 与派生产物之间的所有权关系。
+kind: relationship
+direction: left-to-right
+nodes:
+  - id: bundle
+    label: Lesson Bundle
+    detail: 权威内容源
+    role: source
+  - id: web
+    label: Web Lesson
+    detail: 完整学习体验
+    role: artifact
+  - id: wechat
+    label: WeChat Article
+    detail: 可选分发内容
+    role: artifact
+edges:
+  - from: bundle
+    to: web
+    label: 派生
+  - from: bundle
+    to: wechat
+    label: 派生

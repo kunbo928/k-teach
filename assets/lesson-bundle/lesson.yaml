@@ -1,0 +1,12 @@
+schema_version: 1
+id: replace-with-stable-id
+revision: 2026-01-01T00:00:00Z
+title: Replace with lesson title
+mission: Replace with the mission-linked capability
+objectives:
+  - Replace with one observable objective
+sources:
+  - title: Replace with a primary source
+    url: https://example.com/
+composition: workshop
+visuals: auto

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/diagram-manifest.schema.json",
+  "title": "Diagram Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "kind", "input_hash", "renderer", "design_profile", "scale", "files"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["flow", "relationship", "state"] },
+    "input_hash": { "type": "string", "minLength": 1 },
+    "renderer": { "const": "k-teach-diagram-v1" },
+    "design_profile": { "const": "field-manual" },
+    "scale": { "type": "number" },
+    "files": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } }
+  }
+}

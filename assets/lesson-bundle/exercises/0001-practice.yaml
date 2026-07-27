@@ -1,0 +1,5 @@
+schema_version: 1
+id: replace-with-exercise-id
+prompt: Replace with a mission-linked task.
+answer: Replace with the expected answer or decision criteria.
+feedback: Explain why the answer works and how to recover from likely mistakes.

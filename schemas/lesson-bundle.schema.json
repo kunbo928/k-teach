@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/lesson-bundle.schema.json",
+  "title": "Lesson Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "revision", "title", "mission", "objectives", "sources", "composition", "visuals"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "revision": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "mission": { "type": "string", "minLength": 1 },
+    "objectives": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "url"],
+        "properties": { "title": { "type": "string" }, "url": { "type": "string", "format": "uri" } }
+      }
+    },
+    "composition": { "enum": ["reading", "workshop", "atlas"] },
+    "visuals": { "enum": ["auto", "required", "off"] }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/publication-attempt.schema.json",
+  "title": "Publication Attempt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "artifact_id", "artifact_dir", "account_alias", "title", "media_count", "publication_eligibility", "state", "remote_ids", "media_uploads"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "artifact_id": { "type": "string", "minLength": 1 },
+    "artifact_dir": { "type": "string", "minLength": 1 },
+    "account_alias": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "media_count": { "type": "number" },
+    "publication_eligibility": { "type": "boolean" },
+    "state": { "enum": ["prepared", "uploading_media", "draft_created", "previewed", "publish_submitted", "polling", "published", "failed", "review_rejected", "deleted", "blocked", "unknown"] },
+    "remote_ids": { "type": "object", "additionalProperties": { "type": "string" } },
+    "media_uploads": { "type": "object", "additionalProperties": { "type": "string" } },
+    "last_checked_at": { "type": "string", "format": "date-time" },
+    "error_code": { "type": "string" },
+    "preview_recipient_hash": { "type": "string" },
+    "unknown_operation": { "type": "string" }
+  }
+}

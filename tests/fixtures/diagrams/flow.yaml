@@ -1,0 +1,22 @@
+schema_version: 1
+id: request-flow
+title: 请求处理流程
+description: 从收到请求到返回响应的主流程。
+kind: flow
+direction: top-to-bottom
+nodes:
+  - id: receive
+    label: 收到请求
+    role: start
+  - id: validate
+    label: 验证输入
+    role: decision
+  - id: respond
+    label: 返回响应
+    role: end
+edges:
+  - from: receive
+    to: validate
+  - from: validate
+    to: respond
+    label: 有效

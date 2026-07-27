@@ -1,0 +1,40 @@
+{
+  "name": "k-teach",
+  "version": "0.1.0",
+  "description": "Cross-platform Agent Skill and deterministic CLI for persistent teaching, Web Lessons, diagrams, and channel artifacts.",
+  "type": "module",
+  "bin": {
+    "k-teach": "./bin/k-teach.js"
+  },
+  "files": [
+    "README-zh.md",
+    "SKILL.md",
+    "agents",
+    "assets",
+    "bin",
+    "dist",
+    "references",
+    "schemas"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepack": "npm run build",
+    "pretest": "npm run build",
+    "test": "node --test tests/*.test.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "marked": "^18.0.5",
+    "sharp": "^0.35.3",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2"
+  }
+}

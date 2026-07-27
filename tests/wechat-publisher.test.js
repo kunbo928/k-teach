@@ -1,0 +1,293 @@
+import assert from "node:assert/strict";
+import { createServer } from "node:http";
+import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import test from "node:test";
+
+import {
+  confirmInteractivePublish,
+  createWechatDraft,
+  doctorWechat,
+  previewWechatDraft,
+  publishWechatDraft,
+  queryWechatStatus,
+  resolveWechatCredentials,
+} from "../src/wechat-publisher.ts";
+import { KTeachError } from "../src/errors.ts";
+import { validateDocument } from "../src/schema.ts";
+
+async function fixture() {
+  const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-publisher-"));
+  const artifactDir = path.join(
+    workspace,
+    ".k-teach",
+    "output",
+    "wechat",
+    "public-lesson",
+  );
+  await mkdir(path.join(artifactDir, "cover"), { recursive: true });
+  await mkdir(path.join(artifactDir, "media"), { recursive: true });
+  await writeFile(
+    path.join(artifactDir, "article.html"),
+    '<section><p><img src="KT_WECHAT_MEDIA_001"></p></section>',
+  );
+  await writeFile(path.join(artifactDir, "cover", "cover.jpg"), "cover");
+  await writeFile(path.join(artifactDir, "media", "diagram.png"), "image");
+  await writeFile(
+    path.join(artifactDir, "manifest.json"),
+    JSON.stringify({
+      schema_version: 1,
+      id: "wechat-public-lesson",
+      article: { title: "公开课", author: "K Teach", digest: "摘要" },
+      files: ["article.html", "cover/cover.jpg", "media/diagram.png"],
+      media: [
+        { kind: "cover", file: "cover/cover.jpg", content_hash: "cover-hash" },
+        {
+          kind: "diagram",
+          placeholder: "KT_WECHAT_MEDIA_001",
+          file: "media/diagram.png",
+          content_hash: "media-hash",
+        },
+      ],
+      validation: { eligible_for_draft: true },
+      publication_eligibility: true,
+    }),
+  );
+  return { workspace, artifactDir };
+}
+
+async function withMockWechat(handler) {
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const body = Buffer.concat(chunks).toString("utf8");
+    requests.push({ method: request.method, url: request.url, body });
+    const result = handler(request.url, body);
+    response.setHeader("content-type", "application/json");
+    response.end(JSON.stringify(result));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    requests,
+    close: () => new Promise((resolve) => server.close(resolve)),
+  };
+}
+
+test("official publisher uploads media, drafts, previews, confirms publish, and maps terminal status", async () => {
+  const { workspace, artifactDir } = await fixture();
+  const mock = await withMockWechat((url) => {
+    if (url === "/cgi-bin/stable_token")
+      return { access_token: "secret-access-token", expires_in: 7200 };
+    if (url.startsWith("/cgi-bin/media/uploadimg"))
+      return { url: "https://mmbiz.qpic.cn/body.png" };
+    if (url.startsWith("/cgi-bin/material/add_material"))
+      return { media_id: "cover-media-id", url: "https://mmbiz.qpic.cn/cover.jpg" };
+    if (url.startsWith("/cgi-bin/draft/add"))
+      return { media_id: "draft-media-id" };
+    if (url.startsWith("/cgi-bin/message/mass/preview"))
+      return { errcode: 0, errmsg: "previewmsg success" };
+    if (url.startsWith("/cgi-bin/freepublish/submit"))
+      return { publish_id: "publish-id" };
+    if (url.startsWith("/cgi-bin/freepublish/get"))
+      return {
+        publish_id: "publish-id",
+        publish_status: 0,
+        article_id: "article-id",
+        article_detail: {
+          item: [{ article_url: "https://mp.weixin.qq.com/s/example" }],
+        },
+      };
+    return { errcode: 404, errmsg: "unexpected" };
+  });
+  const options = {
+    cwd: workspace,
+    accountAlias: "main",
+    credentials: { appId: "fake-app-id", appSecret: "fake-app-secret" },
+    apiBaseUrl: mock.baseUrl,
+    cacheDir: path.join(workspace, "cache"),
+  };
+
+  try {
+    const drafted = await createWechatDraft(artifactDir, options);
+    assert.equal(drafted.state, "draft_created");
+    assert.equal(drafted.remote_ids.draft_media_id, "draft-media-id");
+    assert.equal(drafted.remote_ids.cover_media_id, "cover-media-id");
+    assert.equal(drafted.media_uploads.KT_WECHAT_MEDIA_001, "https://mmbiz.qpic.cn/body.png");
+    assert.deepEqual(await validateDocument("publication-attempt", drafted), []);
+
+    const previewed = await previewWechatDraft(drafted.id, "openid-sensitive", options);
+    assert.equal(previewed.state, "previewed");
+    assert.ok(previewed.preview_recipient_hash);
+    assert.doesNotMatch(JSON.stringify(previewed), /openid-sensitive/);
+
+    await assert.rejects(
+      () => publishWechatDraft(drafted.id, options, async () => false),
+      (error) => error instanceof KTeachError && error.code === "validation-failed",
+    );
+    const publishing = await publishWechatDraft(
+      drafted.id,
+      options,
+      async (summary) => {
+        assert.deepEqual(summary, {
+          account_alias: "main",
+          title: "公开课",
+          draft_media_id: "draft-media-id",
+          media_count: 2,
+        });
+        return true;
+      },
+    );
+    assert.equal(publishing.state, "polling");
+    assert.equal(publishing.remote_ids.publish_id, "publish-id");
+
+    const published = await queryWechatStatus(drafted.id, options);
+    assert.equal(published.state, "published");
+    assert.equal(published.remote_ids.article_id, "article-id");
+    assert.equal(
+      published.remote_ids.article_url_0,
+      "https://mp.weixin.qq.com/s/example",
+    );
+
+    const persisted = JSON.parse(
+      await readFile(
+        path.join(workspace, ".k-teach", "publication-attempts", `${drafted.id}.json`),
+        "utf8",
+      ),
+    );
+    assert.equal(persisted.state, "published");
+    assert.doesNotMatch(JSON.stringify(persisted), /secret-access-token|fake-app-secret|openid-sensitive/);
+    assert.equal((await stat(path.join(workspace, "cache", "wechat-main-token.json"))).mode & 0o777, 0o600);
+
+    const draftRequest = mock.requests.find((entry) =>
+      entry.url.startsWith("/cgi-bin/draft/add"),
+    );
+    assert.match(draftRequest.body, /https:\/\/mmbiz\.qpic\.cn\/body\.png/);
+    assert.doesNotMatch(draftRequest.body, /KT_WECHAT_MEDIA_001/);
+  } finally {
+    await mock.close();
+  }
+});
+
+test("publisher maps platform rejection and preserves unknown writes without replay", async () => {
+  const { workspace, artifactDir } = await fixture();
+  let draftCalls = 0;
+  const rejected = await withMockWechat((url) => {
+    if (url === "/cgi-bin/stable_token")
+      return { access_token: "token", expires_in: 7200 };
+    if (url.startsWith("/cgi-bin/media/uploadimg"))
+      return { url: "https://mmbiz.qpic.cn/body.png" };
+    if (url.startsWith("/cgi-bin/material/add_material"))
+      return { media_id: "cover-id" };
+    if (url.startsWith("/cgi-bin/draft/add")) {
+      draftCalls += 1;
+      return { errcode: 48001, errmsg: "api unauthorized" };
+    }
+    return {};
+  });
+  const options = {
+    cwd: workspace,
+    accountAlias: "main",
+    credentials: { appId: "app", appSecret: "secret" },
+    apiBaseUrl: rejected.baseUrl,
+    cacheDir: path.join(workspace, "cache"),
+  };
+  try {
+    await assert.rejects(
+      () => createWechatDraft(artifactDir, options),
+      (error) => error instanceof KTeachError && error.code === "account-ineligible",
+    );
+    assert.equal(draftCalls, 1);
+  } finally {
+    await rejected.close();
+  }
+
+  const unknownOptions = {
+    ...options,
+    apiBaseUrl: "http://127.0.0.1:1",
+    cacheDir: path.join(workspace, "unknown-cache"),
+  };
+  await assert.rejects(
+    () => createWechatDraft(artifactDir, unknownOptions),
+    (error) => error instanceof KTeachError && error.code === "remote-unknown",
+  );
+  const attemptsDir = path.join(workspace, ".k-teach", "publication-attempts");
+  const names = await import("node:fs/promises").then(({ readdir }) => readdir(attemptsDir));
+  const attempts = await Promise.all(
+    names.map(async (name) => JSON.parse(await readFile(path.join(attemptsDir, name), "utf8"))),
+  );
+  assert.ok(attempts.some((attempt) => attempt.state === "unknown"));
+});
+
+test("doctor is read-only, reports capability uncertainty, and maps rate limits", async () => {
+  assert.deepEqual(
+    resolveWechatCredentials("primary-cn", {
+      K_TEACH_WECHAT_PRIMARY_CN_APP_ID: "app",
+      K_TEACH_WECHAT_PRIMARY_CN_APP_SECRET: "secret",
+    }),
+    { appId: "app", appSecret: "secret" },
+  );
+  const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-doctor-"));
+  const healthy = await withMockWechat((url) =>
+    url === "/cgi-bin/stable_token"
+      ? { access_token: "token", expires_in: 7200 }
+      : { errcode: 404, errmsg: "unexpected" },
+  );
+  try {
+    const report = await doctorWechat({
+      cwd: workspace,
+      accountAlias: "main",
+      credentials: { appId: "app", appSecret: "secret" },
+      apiBaseUrl: healthy.baseUrl,
+      cacheDir: path.join(workspace, "healthy-cache"),
+    });
+    assert.deepEqual(report, {
+      account_alias: "main",
+      credentials: "configured",
+      token: "reachable",
+      materials: "unverified",
+      drafts: "unverified",
+      preview: "unverified",
+      publish: "unverified",
+    });
+    assert.deepEqual(
+      healthy.requests.map(({ method, url }) => ({ method, url })),
+      [{ method: "POST", url: "/cgi-bin/stable_token" }],
+    );
+  } finally {
+    await healthy.close();
+  }
+
+  const limited = await withMockWechat(() => ({
+    errcode: 45009,
+    errmsg: "reach max api daily quota limit",
+  }));
+  try {
+    await assert.rejects(
+      () =>
+        doctorWechat({
+          cwd: workspace,
+          accountAlias: "main",
+          credentials: { appId: "app", appSecret: "secret" },
+          apiBaseUrl: limited.baseUrl,
+          cacheDir: path.join(workspace, "limited-cache"),
+        }),
+      (error) => error instanceof KTeachError && error.code === "rate-limited",
+    );
+  } finally {
+    await limited.close();
+  }
+
+  assert.equal(
+    await confirmInteractivePublish({
+      account_alias: "main",
+      title: "公开课",
+      draft_media_id: "draft-id",
+      media_count: 2,
+    }),
+    false,
+  );
+});

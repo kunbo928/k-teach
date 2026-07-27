@@ -1,0 +1,16 @@
+schema_version: 1
+id: field-manual
+revision: 1
+default_theme: paper
+themes:
+  - paper
+  - night
+  - print
+modes:
+  - reading
+  - workshop
+  - atlas
+fonts:
+  display: system-serif
+  body: system-sans
+  code: system-mono

@@ -1,0 +1,12 @@
+schema_version: 1
+id: <lesson-id>-assets
+lesson_id: <lesson-id>
+lesson_revision: <lesson-revision>
+assets:
+  - id: lesson-cover
+    kind: cover
+    purpose: <what this visual helps the learner understand>
+    prompt: <exact provider prompt>
+    input_references:
+      - lesson.md
+      - lesson.yaml#objectives

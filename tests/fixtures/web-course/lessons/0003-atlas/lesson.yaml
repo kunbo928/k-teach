@@ -1,0 +1,12 @@
+schema_version: 1
+id: map-event-loop-phases
+revision: 2026-07-27T03:00:00Z
+title: 画出事件循环阶段
+mission: 根据任务来源定位它进入的运行阶段
+objectives:
+  - 把定时器、I/O 回调和立即回调放进关系图
+sources:
+  - title: Node.js event loop guide
+    url: https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick
+composition: atlas
+visuals: "off"
