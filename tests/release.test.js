@@ -59,6 +59,8 @@ test("Changesets release workflow separates release PRs from OIDC publishing", a
   assert.match(workflow, /pull-requests:\s*write/);
   assert.match(workflow, /id-token:\s*write/);
   assert.match(workflow, /environment:\s*npm/);
+  assert.match(workflow, /node-version:\s*24/);
+  assert.doesNotMatch(workflow, /npm install --global npm@latest/);
   assert.match(workflow, /pnpm install --frozen-lockfile/);
   assert.match(workflow, /id:\s*changesets/);
   assert.match(workflow, /uses:\s*changesets\/action@v1/);

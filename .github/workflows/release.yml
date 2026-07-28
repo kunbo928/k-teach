@@ -27,10 +27,6 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - name: Require npm Trusted Publishing support
-        run: |
-          npm install --global npm@latest
-          npm --version
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Verify source
