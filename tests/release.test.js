@@ -48,7 +48,9 @@ test("release workflow uses tags, OIDC, frozen installs, and the verified tarbal
   assert.match(workflow, /contents:\s*read/);
   assert.match(workflow, /id-token:\s*write/);
   assert.match(workflow, /pnpm install --frozen-lockfile/);
-  assert.match(workflow, /npm pack --json/);
+  assert.match(workflow, /TARBALL="\$\(npm pack --silent\)"/);
+  assert.match(workflow, /test -f "\$TARBALL"/);
+  assert.doesNotMatch(workflow, /pack-result\.json|JSON\.parse/);
   assert.match(workflow, /npm publish "\$TARBALL" --access public/);
   assert.doesNotMatch(workflow, /NODE_AUTH_TOKEN/);
 });
@@ -84,6 +86,9 @@ test("0.0.1 bootstrap is isolated from later Trusted Publishing releases", async
   assert.match(bootstrap, /tags:\s*\n\s*-\s*["']v0\.0\.1["']/);
   assert.match(bootstrap, /NPM_TOKEN_BOOTSTRAP/);
   assert.match(bootstrap, /--provenance/);
+  assert.match(bootstrap, /TARBALL="\$\(npm pack --silent\)"/);
+  assert.match(bootstrap, /test -f "\$TARBALL"/);
+  assert.doesNotMatch(bootstrap, /pack-result\.json|JSON\.parse/);
   assert.match(regular, /github\.ref_name != 'v0\.0\.1'/);
   assert.doesNotMatch(regular, /NODE_AUTH_TOKEN/);
 });
