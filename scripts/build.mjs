@@ -33,4 +33,4 @@ for (const file of sourceFiles) {
   );
 }
 
-process.stdout.write(`Built ${sourceFiles.length} modules in dist/.\n`);
+process.stderr.write(`Built ${sourceFiles.length} modules in dist/.\n`);

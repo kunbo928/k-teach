@@ -1,12 +1,42 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 
 const execFileAsync = promisify(execFile);
 const packageRoot = path.resolve(".");
+
+test("build progress does not contaminate machine-readable stdout", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "k-teach-build-"));
+
+  try {
+    await mkdir(path.join(fixtureRoot, "scripts"));
+    await cp(
+      path.join(packageRoot, "scripts", "build.mjs"),
+      path.join(fixtureRoot, "scripts", "build.mjs"),
+    );
+    await cp(path.join(packageRoot, "src"), path.join(fixtureRoot, "src"), {
+      recursive: true,
+    });
+
+    const result = await execFileAsync(
+      process.execPath,
+      [path.join(fixtureRoot, "scripts", "build.mjs")],
+      {
+        cwd: fixtureRoot,
+        encoding: "utf8",
+      },
+    );
+
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /Built \d+ modules in dist\/\.\n$/);
+  } finally {
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
 
 test("release workflow uses tags, OIDC, frozen installs, and the verified tarball", async () => {
   const workflow = await readFile(
