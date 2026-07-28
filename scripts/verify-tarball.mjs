@@ -8,11 +8,13 @@ const execFileAsync = promisify(execFile);
 const tarball = process.argv[2];
 if (!tarball) throw new Error("Usage: node scripts/verify-tarball.mjs <package.tgz>");
 
-const { stdout } = await execFileAsync("npm", ["pack", tarball, "--json", "--dry-run"], {
+const { stdout } = await execFileAsync("tar", ["-tzf", tarball], {
   encoding: "utf8",
 });
-const listing = JSON.parse(stdout)[0];
-const names = listing.files.map((entry) => entry.path);
+const names = stdout
+  .split(/\r?\n/)
+  .filter(Boolean)
+  .map((name) => name.replace(/^\.?\/?package\//, "").replace(/\/$/, ""));
 for (const required of [
   "bin/k-teach.js",
   "dist/cli.js",

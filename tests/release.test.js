@@ -38,6 +38,16 @@ test("build progress does not contaminate machine-readable stdout", async () => 
   }
 });
 
+test("tarball verification reads the archive without npm JSON assumptions", async () => {
+  const verifier = await readFile(
+    path.join(packageRoot, "scripts", "verify-tarball.mjs"),
+    "utf8",
+  );
+
+  assert.match(verifier, /execFileAsync\("tar", \["-tzf", tarball\]/);
+  assert.doesNotMatch(verifier, /npm.*pack.*--json|JSON\.parse/);
+});
+
 test("release workflow uses tags, OIDC, frozen installs, and the verified tarball", async () => {
   const workflow = await readFile(
     path.join(packageRoot, ".github", "workflows", "publish.yml"),
