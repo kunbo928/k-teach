@@ -153,6 +153,13 @@ k-teach preview
 全部 Teach；在 `teachs/<id>` 内运行或传入 `--teach <id>` 时，只预览选定的
 Teach。预览服务仅监听 `127.0.0.1`。
 
+## 发布
+
+每个影响已发布包行为的改动都运行 `pnpm changeset`，并按兼容性选择 SemVer
+级别。Changesets Action 会在 `main` 上维护 Release PR；合并该 PR 后，通过
+npm Trusted Publishing 发布准备好的版本。npm 包必须信任 GitHub 仓库
+`kunbo928/k-teach`、workflow `release.yml` 和 environment `npm`。
+
 ## 开发
 
 克隆仓库并安装开发依赖：

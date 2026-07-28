@@ -1,0 +1,51 @@
+name: Changesets release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Require npm Trusted Publishing support
+        run: |
+          npm install --global npm@latest
+          npm --version
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify source
+        run: |
+          pnpm typecheck
+          pnpm test
+      - name: Create release pull request
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: pnpm changeset version
+          commit: "chore: release package"
+          title: "chore: release package"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish prepared package
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: pnpm release

@@ -180,6 +180,14 @@ Teach through one local Project Preview. Run it inside `teachs/<id>`, or pass
 `--teach <id>`, to preview only the selected Teach. Preview servers bind only
 to `127.0.0.1`.
 
+## Releases
+
+Add `pnpm changeset` to each user-visible package change and select the SemVer
+impact. Changesets Action maintains a release pull request on `main`; merging
+that pull request publishes the prepared version through npm Trusted
+Publishing. The npm package must trust GitHub repository `kunbo928/k-teach`,
+workflow `release.yml`, and environment `npm`.
+
 ## Development
 
 Clone the repository and install its development dependencies:

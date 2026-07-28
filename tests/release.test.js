@@ -48,21 +48,29 @@ test("tarball verification reads the archive without npm JSON assumptions", asyn
   assert.doesNotMatch(verifier, /npm.*pack.*--json|JSON\.parse/);
 });
 
-test("release workflow uses tags, OIDC, frozen installs, and the verified tarball", async () => {
+test("Changesets release workflow separates release PRs from OIDC publishing", async () => {
   const workflow = await readFile(
-    path.join(packageRoot, ".github", "workflows", "publish.yml"),
+    path.join(packageRoot, ".github", "workflows", "release.yml"),
     "utf8",
   );
 
-  assert.match(workflow, /tags:\s*\n\s*-\s*["']v\*["']/);
-  assert.match(workflow, /contents:\s*read/);
+  assert.match(workflow, /branches:\s*\n\s*-\s*main/);
+  assert.match(workflow, /contents:\s*write/);
+  assert.match(workflow, /pull-requests:\s*write/);
   assert.match(workflow, /id-token:\s*write/);
+  assert.match(workflow, /environment:\s*npm/);
   assert.match(workflow, /pnpm install --frozen-lockfile/);
-  assert.match(workflow, /TARBALL="\$\(npm pack --silent\)"/);
-  assert.match(workflow, /test -f "\$TARBALL"/);
-  assert.doesNotMatch(workflow, /pack-result\.json|JSON\.parse/);
-  assert.match(workflow, /npm publish "\$TARBALL" --access public/);
-  assert.doesNotMatch(workflow, /NODE_AUTH_TOKEN/);
+  assert.match(workflow, /id:\s*changesets/);
+  assert.match(workflow, /uses:\s*changesets\/action@v1/);
+  assert.match(workflow, /version:\s*pnpm changeset version/);
+  assert.match(workflow, /GITHUB_TOKEN:\s*\$\{\{\s*secrets\.GITHUB_TOKEN\s*\}\}/);
+  assert.match(
+    workflow,
+    /if:\s*steps\.changesets\.outputs\.hasChangesets == 'false'/,
+  );
+  assert.match(workflow, /run:\s*pnpm release/);
+  assert.doesNotMatch(workflow, /^\s*publish:/m);
+  assert.doesNotMatch(workflow, /NPM_TOKEN|NODE_AUTH_TOKEN/);
 });
 
 test("release metadata gate rejects a tag that differs from package version", async () => {
@@ -89,7 +97,7 @@ test("0.0.1 bootstrap is isolated from later Trusted Publishing releases", async
     "utf8",
   );
   const regular = await readFile(
-    path.join(packageRoot, ".github", "workflows", "publish.yml"),
+    path.join(packageRoot, ".github", "workflows", "release.yml"),
     "utf8",
   );
 
@@ -99,6 +107,24 @@ test("0.0.1 bootstrap is isolated from later Trusted Publishing releases", async
   assert.match(bootstrap, /TARBALL="\$\(npm pack --silent\)"/);
   assert.match(bootstrap, /test -f "\$TARBALL"/);
   assert.doesNotMatch(bootstrap, /pack-result\.json|JSON\.parse/);
-  assert.match(regular, /github\.ref_name != 'v0\.0\.1'/);
+  assert.match(regular, /branches:\s*\n\s*-\s*main/);
+  assert.doesNotMatch(regular, /tags:/);
   assert.doesNotMatch(regular, /NODE_AUTH_TOKEN/);
+});
+
+test("Changesets config treats k-teach as a public package on main", async () => {
+  const config = JSON.parse(
+    await readFile(path.join(packageRoot, ".changeset", "config.json"), "utf8"),
+  );
+  const manifest = JSON.parse(
+    await readFile(path.join(packageRoot, "package.json"), "utf8"),
+  );
+
+  assert.equal(config.access, "public");
+  assert.equal(config.baseBranch, "main");
+  assert.equal(config.commit, false);
+  assert.equal(manifest.scripts.changeset, "changeset");
+  assert.equal(manifest.scripts.version, "changeset version");
+  assert.equal(manifest.scripts.release, "npm run build && changeset publish");
+  assert.equal(manifest.devDependencies["@changesets/cli"], "2.31.1");
 });

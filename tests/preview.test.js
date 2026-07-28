@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { cp, mkdtemp, readFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -47,23 +47,21 @@ test("project preview serves every Teach from one process", async (t) => {
   await cp(path.resolve("tests/fixtures/web-course"), path.join(project, "teachs", "beta"), {
     recursive: true,
   });
-  await import("node:fs/promises").then(({ mkdir, writeFile }) =>
-    Promise.all([
-      mkdir(path.join(project, ".k-teach"), { recursive: true }),
-      writeFile(
-        path.join(project, ".k-teach", "config.yaml"),
-        "schema_version: 1\ndesign_profile: field-manual\noutput_dir: .k-teach/output\nvisuals: auto\n",
-      ),
-      writeFile(
-        path.join(project, "teachs", "alpha", "teach.yaml"),
-        "schema_version: 1\nid: alpha\ntitle: Alpha Teach\n",
-      ),
-      writeFile(
-        path.join(project, "teachs", "beta", "teach.yaml"),
-        "schema_version: 1\nid: beta\ntitle: Beta Teach\n",
-      ),
-    ]),
-  );
+  await mkdir(path.join(project, ".k-teach"), { recursive: true });
+  await Promise.all([
+    writeFile(
+      path.join(project, ".k-teach", "config.yaml"),
+      "schema_version: 1\ndesign_profile: field-manual\noutput_dir: .k-teach/output\nvisuals: auto\n",
+    ),
+    writeFile(
+      path.join(project, "teachs", "alpha", "teach.yaml"),
+      "schema_version: 1\nid: alpha\ntitle: Alpha Teach\n",
+    ),
+    writeFile(
+      path.join(project, "teachs", "beta", "teach.yaml"),
+      "schema_version: 1\nid: beta\ntitle: Beta Teach\n",
+    ),
+  ]);
 
   const child = spawn(process.execPath, [cliPath, "preview", "--port", "0"], {
     cwd: project,
