@@ -41,7 +41,7 @@ import {
 } from "./agent-integration.js";
 import { searchableMultiSelect } from "./searchable-multi-select.js";
 
-export const CLI_VERSION = "0.1.0";
+export const CLI_VERSION = "0.2.0";
 
 async function chooseTools(
   projectRoot        ,

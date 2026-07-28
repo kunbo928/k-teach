@@ -51,7 +51,7 @@ test("init creates the Learning Project, initial Teach, and selected Agent Integ
     path.join(project, ".codex", "skills", "k-teach", "SKILL.md"),
     "utf8",
   );
-  assert.match(skill, /generatedBy: "0\.1\.0"/);
+  assert.match(skill, /generatedBy: "0\.2\.0"/);
   assert.match(skill, /\bk-teach validate\b/);
   assert.doesNotMatch(skill, /node bin\/k-teach\.js/);
 });
@@ -88,7 +88,7 @@ test("update repairs owned files and preserves the Learning Project and other Sk
   assert.equal(result.exitCode, 0);
   assert.equal(await readFile(configPath, "utf8"), customConfig);
   assert.equal(await readFile(otherSkill, "utf8"), "USER OWNED\n");
-  assert.match(await readFile(skillPath, "utf8"), /generatedBy: "0\.1\.0"/);
+  assert.match(await readFile(skillPath, "utf8"), /generatedBy: "0\.2\.0"/);
 
   const repeated = await runCli(["init", "--tools", "codex"], project);
   assert.equal(repeated.exitCode, 0);

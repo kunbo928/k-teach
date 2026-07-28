@@ -79,7 +79,7 @@ test("release metadata gate rejects a tag that differs from package version", as
       ),
     (error) =>
       error.code !== 0 &&
-      /does not match package version 0\.1\.0/.test(error.stderr),
+      /does not match package version 0\.2\.0/.test(error.stderr),
   );
 });
 
