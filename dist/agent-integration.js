@@ -186,6 +186,16 @@ export async function installAgentIntegrations(
   tools                      ,
   version        ,
 )                {
+  if (
+    path.basename(path.dirname(projectRoot)) === "teachs" ||
+    await exists(path.join(projectRoot, "teach.yaml"))
+  ) {
+    throw new KTeachError(
+      "validation-failed",
+      "Agent Integrations cannot be installed inside a Teach.",
+      "Run k-teach init or update from the Learning Project root.",
+    );
+  }
   const sourceSkill = await readFile(path.join(packageRoot, "SKILL.md"), "utf8");
   for (const tool of tools) {
     const target = path.resolve(

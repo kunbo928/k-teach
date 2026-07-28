@@ -1,6 +1,6 @@
 {
   "name": "k-teach",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Cross-platform Agent Skill and deterministic CLI for persistent teaching, Web Lessons, diagrams, and channel artifacts.",
   "type": "module",
   "bin": {
@@ -40,6 +40,8 @@
   "license": "MIT",
   "private": false,
   "dependencies": {
+    "@inquirer/core": "^10.3.2",
+    "chalk": "^5.6.2",
     "katex": "^0.17.0",
     "marked": "^18.0.5",
     "marked-katex-extension": "^5.1.10",

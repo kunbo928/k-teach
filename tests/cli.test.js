@@ -33,43 +33,105 @@ async function runCli(args, cwd) {
   }
 }
 
-test("init creates a valid learning workspace without overwriting content", async () => {
+test("init creates a valid Learning Project and initial Teach without overwriting content", async () => {
   const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-init-"));
 
   const first = await runCli(["init", "--tools", "none"], workspace);
 
   assert.equal(first.exitCode, 0);
-  assert.match(first.stdout, /Learning Workspace and Agent Integrations created/);
-  assert.equal((await stat(path.join(workspace, "k-teach", "lessons"))).isDirectory(), true);
-  assert.equal((await stat(path.join(workspace, "k-teach", "publications"))).isDirectory(), true);
+  assert.match(first.stdout, /Learning Project, initial Teach/);
+  assert.equal((await stat(path.join(workspace, "teachs", "main", "lessons"))).isDirectory(), true);
+  assert.equal((await stat(path.join(workspace, "teachs", "main", "publications"))).isDirectory(), true);
   assert.equal(
-    (await stat(path.join(workspace, "k-teach", "learning-records"))).isDirectory(),
+    (await stat(path.join(workspace, "teachs", "main", "learning-records"))).isDirectory(),
     true,
   );
-  assert.equal((await stat(path.join(workspace, "k-teach", "reference"))).isDirectory(), true);
+  assert.equal((await stat(path.join(workspace, "teachs", "main", "reference"))).isDirectory(), true);
   assert.match(
-    await readFile(path.join(workspace, "k-teach", "MISSION.md"), "utf8"),
+    await readFile(path.join(workspace, "teachs", "main", "MISSION.md"), "utf8"),
     /Success looks like/,
   );
   assert.match(
-    await readFile(path.join(workspace, "k-teach", "RESOURCES.md"), "utf8"),
+    await readFile(path.join(workspace, "teachs", "main", "RESOURCES.md"), "utf8"),
     /## Knowledge/,
   );
   assert.match(
-    await readFile(path.join(workspace, "k-teach", "GLOSSARY.md"), "utf8"),
+    await readFile(path.join(workspace, "teachs", "main", "GLOSSARY.md"), "utf8"),
     /## Terms/,
   );
   assert.match(
-    await readFile(path.join(workspace, "k-teach", "NOTES.md"), "utf8"),
+    await readFile(path.join(workspace, "teachs", "main", "NOTES.md"), "utf8"),
     /stable teaching preferences/i,
   );
   assert.match(
-    await readFile(path.join(workspace, "k-teach", "config.yaml"), "utf8"),
+    await readFile(path.join(workspace, ".k-teach", "config.yaml"), "utf8"),
     /schema_version: 1/,
   );
 
   const second = await runCli(["init", "--tools", "none"], workspace);
   assert.equal(second.exitCode, 0);
+});
+
+test("one Learning Project supports multiple isolated Teachs", async () => {
+  const project = await mkdtemp(path.join(tmpdir(), "k-teach-multi-"));
+  assert.equal(
+    (await runCli(["init", "--tools", "none", "--teach", "mathematics"], project))
+      .exitCode,
+    0,
+  );
+  assert.equal(
+    (await runCli(["teach", "create", "photography"], project)).exitCode,
+    0,
+  );
+
+  await writeFile(
+    path.join(project, "teachs", "mathematics", "MISSION.md"),
+    "# Mission: Mathematics\n",
+  );
+  await writeFile(
+    path.join(project, "teachs", "photography", "MISSION.md"),
+    "# Mission: Photography\n",
+  );
+
+  assert.match(
+    await readFile(
+      path.join(project, "teachs", "mathematics", "MISSION.md"),
+      "utf8",
+    ),
+    /Mathematics/,
+  );
+  assert.match(
+    await readFile(
+      path.join(project, "teachs", "photography", "MISSION.md"),
+      "utf8",
+    ),
+    /Photography/,
+  );
+
+  const ambiguous = await runCli(["validate"], project);
+  assert.equal(ambiguous.exitCode, 2);
+  assert.match(ambiguous.stderr, /Multiple Teachs exist/);
+  assert.equal(
+    (await runCli(["validate", "--teach", "photography"], project)).exitCode,
+    0,
+  );
+});
+
+test("validate rejects a nested Teach output directory", async () => {
+  const project = await mkdtemp(path.join(tmpdir(), "k-teach-nested-output-"));
+  assert.equal(
+    (await runCli(["init", "--tools", "none"], project)).exitCode,
+    0,
+  );
+  await mkdir(
+    path.join(project, "teachs", "main", ".k-teach", ".k-teach", "output"),
+    { recursive: true },
+  );
+
+  const result = await runCli(["validate"], project);
+
+  assert.equal(result.exitCode, 2);
+  assert.match(result.stderr, /Nested \.k-teach\/\.k-teach/);
 });
 
 test("capabilities reports deterministic core and optional boundaries", async () => {
@@ -91,10 +153,10 @@ test("validate accepts an initialized workspace and reports invalid schema versi
 
   const valid = await runCli(["validate"], workspace);
   assert.equal(valid.exitCode, 0);
-  assert.match(valid.stdout, /Learning Workspace is valid/);
+  assert.match(valid.stdout, /Teach is valid/);
 
   await writeFile(
-    path.join(workspace, "k-teach", "config.yaml"),
+    path.join(workspace, ".k-teach", "config.yaml"),
     "schema_version: 99\nvisuals: auto\n",
   );
   const invalid = await runCli(["validate"], workspace);
@@ -116,7 +178,7 @@ test("validate rejects a legacy teaching workspace without modifying it", async 
   assert.doesNotMatch(result.stderr, /0001-event-loop\.html.*deleted/i);
 
   await assert.rejects(
-    () => stat(path.join(workspace, "k-teach", "config.yaml")),
+    () => stat(path.join(workspace, ".k-teach", "config.yaml")),
     (error) => error.code === "ENOENT",
   );
 });
@@ -124,7 +186,7 @@ test("validate rejects a legacy teaching workspace without modifying it", async 
 test("validate checks each semantic Lesson Bundle", async () => {
   const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-bundle-"));
   assert.equal((await runCli(["init", "--tools", "none"], workspace)).exitCode, 0);
-  const lesson = path.join(workspace, "k-teach", "lessons", "0001-event-loop");
+  const lesson = path.join(workspace, "teachs", "main", "lessons", "0001-event-loop");
   await mkdir(path.join(lesson, "exercises"), { recursive: true });
   await mkdir(path.join(lesson, "media"), { recursive: true });
   await writeFile(path.join(lesson, "lesson.md"), "# 事件循环\n\n预测输出。");
@@ -161,7 +223,7 @@ visuals: "off"
 test("validate rejects exercise files that the Web renderer cannot consume", async () => {
   const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-exercises-"));
   assert.equal((await runCli(["init", "--tools", "none"], workspace)).exitCode, 0);
-  const lesson = path.join(workspace, "k-teach", "lessons", "0001-practice");
+  const lesson = path.join(workspace, "teachs", "main", "lessons", "0001-practice");
   await mkdir(path.join(lesson, "exercises"), { recursive: true });
   await mkdir(path.join(lesson, "media"), { recursive: true });
   await writeFile(path.join(lesson, "lesson.md"), "# 练习\n\n先独立作答。");
@@ -196,7 +258,7 @@ visuals: "off"
 test("render web creates a Field Manual course and a no-JS lesson", async () => {
   const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-web-"));
   assert.equal((await runCli(["init", "--tools", "none"], workspace)).exitCode, 0);
-  const lesson = path.join(workspace, "k-teach", "lessons", "0001-event-loop");
+  const lesson = path.join(workspace, "teachs", "main", "lessons", "0001-event-loop");
   await mkdir(path.join(lesson, "exercises"), { recursive: true });
   await mkdir(path.join(lesson, "media"), { recursive: true });
   await writeFile(
@@ -299,7 +361,7 @@ feedback: 当前同步任务结束后先清空微任务队列。
 
   const result = await runCli(["render", "web"], workspace);
   assert.equal(result.exitCode, 0);
-  const output = path.join(workspace, "k-teach", ".k-teach", "output", "web");
+  const output = path.join(workspace, "teachs", "main", ".k-teach", "output", "web");
   const index = await readFile(path.join(output, "index.html"), "utf8");
   const page = await readFile(
     path.join(output, "lessons", "event-loop-01.html"),

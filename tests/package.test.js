@@ -15,7 +15,7 @@ test("package metadata identifies the public MIT release and vendored notices", 
   );
 
   assert.equal(manifest.name, "k-teach");
-  assert.equal(manifest.version, "0.0.1");
+  assert.equal(manifest.version, "0.1.0");
   assert.equal(manifest.private, false);
   assert.equal(manifest.license, "MIT");
   assert.equal(
@@ -55,5 +55,5 @@ test("npm build emits a JavaScript CLI that runs without the TypeScript source t
     [path.join(packageRoot, "bin", "k-teach.js"), "--version"],
     { cwd: workspace, encoding: "utf8" },
   );
-  assert.equal(version.stdout.trim(), "0.0.1");
+  assert.equal(version.stdout.trim(), "0.1.0");
 });

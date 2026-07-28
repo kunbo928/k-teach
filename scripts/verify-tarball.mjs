@@ -1,12 +1,21 @@
 import { execFile } from "node:child_process";
+import { createRequire } from "node:module";
 import { mkdtemp, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const tarball = process.argv[2];
 if (!tarball) throw new Error("Usage: node scripts/verify-tarball.mjs <package.tgz>");
+const packageRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+);
+const expectedVersion = createRequire(import.meta.url)(
+  path.join(packageRoot, "package.json"),
+).version;
 
 const { stdout } = await execFileAsync("tar", ["-tzf", tarball], {
   encoding: "utf8",
@@ -42,7 +51,7 @@ const version = await execFileAsync(bin, ["--version"], {
   cwd: installRoot,
   encoding: "utf8",
 });
-if (version.stdout.trim() !== "0.0.1") {
+if (version.stdout.trim() !== expectedVersion) {
   throw new Error(`Installed CLI reported ${version.stdout.trim()}`);
 }
 await readFile(path.join(installRoot, "node_modules", "k-teach", "SKILL.md"));
@@ -51,7 +60,8 @@ await execFileAsync(bin, ["init", projectRoot, "--tools", "codex"], {
   cwd: installRoot,
   encoding: "utf8",
 });
-await stat(path.join(projectRoot, "k-teach", "config.yaml"));
+await stat(path.join(projectRoot, ".k-teach", "config.yaml"));
+await stat(path.join(projectRoot, "teachs", "main", "teach.yaml"));
 await stat(
   path.join(projectRoot, ".codex", "skills", "k-teach", "SKILL.md"),
 );

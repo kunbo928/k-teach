@@ -50,7 +50,7 @@ test("Learning Asset Plan schema captures purpose, prompt, and authoritative ref
 test("visuals register validates and records a provider result without invoking a model", async () => {
   const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-visual-"));
   assert.equal((await runCli(["init", "--tools", "none"], workspace)).exitCode, 0);
-  const media = path.join(workspace, "k-teach", "lessons", "event-loop", "media");
+  const media = path.join(workspace, "teachs", "main", "lessons", "event-loop", "media");
   await mkdir(path.join(media, "generated"), { recursive: true });
   const planPath = path.join(media, "visual-plan.yaml");
   const resultPath = path.join(media, "queue-cover.result.yaml");
@@ -107,7 +107,8 @@ validation:
     await readFile(
       path.join(
         workspace,
-        "k-teach",
+        "teachs",
+        "main",
         ".k-teach",
         "artifacts",
         "visuals",
@@ -128,13 +129,13 @@ validation:
   assert.match(record.content_hash, /^[a-f0-9]{64}$/);
   assert.deepEqual(await validateDocument("visual-asset-record", record), []);
 
-  await mkdir(path.join(workspace, "k-teach", "lessons", "event-loop", "exercises"));
+  await mkdir(path.join(workspace, "teachs", "main", "lessons", "event-loop", "exercises"));
   await writeFile(
-    path.join(workspace, "k-teach", "lessons", "event-loop", "lesson.md"),
+    path.join(workspace, "teachs", "main", "lessons", "event-loop", "lesson.md"),
     "# 事件循环\n\n先建立模型。\n",
   );
   await writeFile(
-    path.join(workspace, "k-teach", "lessons", "event-loop", "lesson.yaml"),
+    path.join(workspace, "teachs", "main", "lessons", "event-loop", "lesson.yaml"),
     `schema_version: 1
 id: event-loop-01
 revision: 2026-07-27T00:00:00Z
@@ -160,7 +161,7 @@ visuals: required
 test("render web degrades visuals=auto with a tracked warning when no provider result exists", async () => {
   const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-auto-"));
   assert.equal((await runCli(["init", "--tools", "none"], workspace)).exitCode, 0);
-  const lesson = path.join(workspace, "k-teach", "lessons", "event-loop");
+  const lesson = path.join(workspace, "teachs", "main", "lessons", "event-loop");
   await mkdir(path.join(lesson, "exercises"), { recursive: true });
   await mkdir(path.join(lesson, "media"), { recursive: true });
   await writeFile(path.join(lesson, "lesson.md"), "# 事件循环\n\n先建立模型。\n");
@@ -199,7 +200,7 @@ assets:
   assert.equal(rendered.exitCode, 0, rendered.stderr);
   const manifest = JSON.parse(
     await readFile(
-      path.join(workspace, "k-teach", ".k-teach", "output", "web", "artifact-manifest.json"),
+      path.join(workspace, "teachs", "main", ".k-teach", "output", "web", "artifact-manifest.json"),
       "utf8",
     ),
   );
@@ -213,7 +214,7 @@ test("render web fails required visuals and cleanly skips off visuals without a 
   async function createWorkspace(mode) {
     const workspace = await mkdtemp(path.join(tmpdir(), `k-teach-${mode}-`));
     assert.equal((await runCli(["init", "--tools", "none"], workspace)).exitCode, 0);
-    const lesson = path.join(workspace, "k-teach", "lessons", "event-loop");
+    const lesson = path.join(workspace, "teachs", "main", "lessons", "event-loop");
     await mkdir(path.join(lesson, "exercises"), { recursive: true });
     await mkdir(path.join(lesson, "media"), { recursive: true });
     await writeFile(path.join(lesson, "lesson.md"), "# 事件循环\n\n先建立模型。\n");
@@ -262,7 +263,8 @@ assets:
     await readFile(
       path.join(
         offWorkspace,
-        "k-teach",
+        "teachs",
+        "main",
         ".k-teach",
         "output",
         "web",

@@ -1,18 +1,20 @@
 ---
 name: k-teach
-description: Build and maintain a mission-driven learning workspace with source-grounded Lesson Bundles, polished local Web Lessons, deterministic diagrams, optional generated visuals, and explicitly selected WeChat articles. Use when an AI agent needs to teach a topic over multiple sessions, create or revise a lesson, design an interactive course page, track learning progress, or prepare content for a WeChat official account.
+description: Build and maintain multiple mission-driven Teachs with source-grounded Lesson Bundles, polished local Web Lessons, deterministic diagrams, optional generated visuals, and explicitly selected WeChat articles. Use when an AI agent needs to teach topics over multiple sessions, create or revise a lesson, design an interactive course page, track learning progress, or prepare content for a WeChat official account.
 ---
 
 # K Teach
 
-Treat the Learning Workspace as persistent state and each Lesson Bundle as the
-authoritative source for one lesson. Keep teaching decisions in the agent
+Treat the Learning Project as a container for independent Teachs. Each Teach
+owns its persistent learning state, and each Lesson Bundle is the authoritative
+source for one lesson. Keep teaching decisions in the agent
 workflow; use the bundled `k-teach` CLI only for deterministic validation,
 rendering, preview, media processing, and publication operations.
 
 ## Workflow
 
-1. Read the workspace mission, current learning state, trusted sources, and
+1. Select the intended Teach. If it does not exist, create it with
+   `k-teach teach create <id>`. Read that Teach's mission, current learning state, trusted sources, and
    existing Lesson Bundles before proposing work.
 2. Define the next lesson around a concrete capability the learner should gain.
 3. Research claims against suitable primary sources and record citations.
@@ -35,14 +37,16 @@ rendering, preview, media processing, and publication operations.
    remote action. Public publishing always requires current interactive final
    confirmation.
 9. Record learning results, artifact manifests, and publication attempts in the
-   workspace.
+   selected Teach.
 
 ## Non-negotiable boundaries
 
 - Preserve facts, sources, learning goals, and answer keys across renderers.
 - Keep exercises and answers in Web Lessons; omit them from WeChat articles.
 - Do not assume a local lesson is public or add a link to it automatically.
-- Never store credentials in the Skill, workspace, Lesson Bundle, artifact,
+- Never install Agent Integrations inside `teachs/<id>`; integrations belong
+  to the Learning Project root.
+- Never store credentials in the Skill, Teach, Lesson Bundle, artifact,
   manifest, logs, or errors.
 - Use only the official WeChat API. Do not automate browser forms, cookies, or
   reverse-engineered endpoints.
@@ -62,8 +66,11 @@ Publication Brief or rendering a WeChat article.
 ## CLI
 
 Run `k-teach capabilities --json` to inspect available deterministic
-capabilities. Start a workspace with `k-teach init`, then run
-`k-teach validate` before rendering. Generate the local course with
+capabilities. Start a Learning Project with `k-teach init`; it creates
+`teachs/main` by default, or use `--teach <id>` for another initial ID.
+Create additional courses with `k-teach teach create <id>`. Run commands from
+inside `teachs/<id>` or pass `--teach <id>`. Then run `k-teach validate`
+before rendering. Generate the selected Teach with
 `k-teach render web`. Use `k-teach preview` to render
 again and serve the course only on `127.0.0.1`.
 Render a validated Diagram Spec with

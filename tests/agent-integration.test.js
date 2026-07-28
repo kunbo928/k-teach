@@ -32,7 +32,7 @@ async function runCli(args, cwd, env = process.env) {
   }
 }
 
-test("init creates the Learning Workspace and selected Agent Integration", async () => {
+test("init creates the Learning Project, initial Teach, and selected Agent Integration", async () => {
   const parent = await mkdtemp(path.join(tmpdir(), "k-teach-agent-init-"));
   const project = path.join(parent, "course");
 
@@ -40,29 +40,29 @@ test("init creates the Learning Workspace and selected Agent Integration", async
 
   assert.equal(result.exitCode, 0);
   assert.equal(
-    (await stat(path.join(project, "k-teach"))).isDirectory(),
+    (await stat(path.join(project, "teachs", "main"))).isDirectory(),
     true,
   );
   assert.match(
-    await readFile(path.join(project, "k-teach", "config.yaml"), "utf8"),
+    await readFile(path.join(project, ".k-teach", "config.yaml"), "utf8"),
     /schema_version: 1/,
   );
   const skill = await readFile(
     path.join(project, ".codex", "skills", "k-teach", "SKILL.md"),
     "utf8",
   );
-  assert.match(skill, /generatedBy: "0\.0\.1"/);
+  assert.match(skill, /generatedBy: "0\.1\.0"/);
   assert.match(skill, /\bk-teach validate\b/);
   assert.doesNotMatch(skill, /node bin\/k-teach\.js/);
 });
 
-test("update repairs owned files and preserves the Learning Workspace and other Skills", async () => {
+test("update repairs owned files and preserves the Learning Project and other Skills", async () => {
   const project = await mkdtemp(path.join(tmpdir(), "k-teach-update-"));
   assert.equal(
     (await runCli(["init", "--tools", "codex"], project)).exitCode,
     0,
   );
-  const configPath = path.join(project, "k-teach", "config.yaml");
+  const configPath = path.join(project, ".k-teach", "config.yaml");
   const skillPath = path.join(
     project,
     ".codex",
@@ -88,7 +88,7 @@ test("update repairs owned files and preserves the Learning Workspace and other 
   assert.equal(result.exitCode, 0);
   assert.equal(await readFile(configPath, "utf8"), customConfig);
   assert.equal(await readFile(otherSkill, "utf8"), "USER OWNED\n");
-  assert.match(await readFile(skillPath, "utf8"), /generatedBy: "0\.0\.1"/);
+  assert.match(await readFile(skillPath, "utf8"), /generatedBy: "0\.1\.0"/);
 
   const repeated = await runCli(["init", "--tools", "codex"], project);
   assert.equal(repeated.exitCode, 0);
@@ -103,7 +103,7 @@ test("non-interactive init without a detected or selected Agent leaves no partia
   assert.equal(result.exitCode, 2);
   assert.match(result.stderr, /No Agent tools were detected/);
   await assert.rejects(
-    () => stat(path.join(project, "k-teach")),
+    () => stat(path.join(project, ".k-teach")),
     (error) => error.code === "ENOENT",
   );
 });
@@ -188,7 +188,28 @@ test("invalid --tools input fails before writing project files", async () => {
     assert.equal(result.exitCode, 2);
   }
   await assert.rejects(
-    () => stat(path.join(project, "k-teach")),
+    () => stat(path.join(project, ".k-teach")),
+    (error) => error.code === "ENOENT",
+  );
+});
+
+test("Agent Integrations cannot be installed inside a Teach", async () => {
+  const project = await mkdtemp(path.join(tmpdir(), "k-teach-agent-guard-"));
+  assert.equal(
+    (await runCli(["init", "--tools", "none"], project)).exitCode,
+    0,
+  );
+  const teachRoot = path.join(project, "teachs", "main");
+
+  const result = await runCli(
+    ["init", ".", "--tools", "codex"],
+    teachRoot,
+  );
+
+  assert.equal(result.exitCode, 2);
+  assert.match(result.stderr, /cannot be initialized as a Learning Project/);
+  await assert.rejects(
+    () => stat(path.join(teachRoot, ".codex")),
     (error) => error.code === "ENOENT",
   );
 });

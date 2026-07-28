@@ -1,5 +1,4 @@
 import path from "node:path";
-import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 
 import { KTeachError } from "./errors.ts";
@@ -23,7 +22,10 @@ import {
 } from "./wechat-publisher.ts";
 import {
   assertWorkspaceIsCurrent,
+  initializeTeach,
   initializeWorkspace,
+  resolveProjectConfigRoot,
+  resolveProjectRoot,
   resolveWorkspaceRoot,
 } from "./workspace.ts";
 import {
@@ -33,8 +35,9 @@ import {
   installAgentIntegrations,
   selectTools,
 } from "./agent-integration.ts";
+import { searchableMultiSelect } from "./searchable-multi-select.ts";
 
-export const CLI_VERSION = "0.0.1";
+export const CLI_VERSION = "0.1.0";
 
 async function chooseTools(
   projectRoot: string,
@@ -50,27 +53,20 @@ async function chooseTools(
       "Pass --tools all, --tools none, or a comma-separated tool list.",
     );
   }
-  const defaults = detected.map((tool) => tool.value).join(",");
-  stdout.write(
-    `${AGENT_TOOLS.map((tool) => `${tool.value}: ${tool.name}`).join("\n")}\n`,
-  );
-  const prompt = createInterface({ input: stdin, output: stdout });
-  try {
-    const answer = await prompt.question(
-      `Agent tools (comma-separated${defaults ? `, default ${defaults}` : ""}): `,
-    );
-    const selection = answer.trim() || defaults;
-    if (!selection) {
-      throw new KTeachError(
-        "validation-failed",
-        "At least one Agent or --tools none must be selected.",
-        "Enter Agent IDs, or rerun with --tools none.",
-      );
-    }
-    return selectTools(selection);
-  } finally {
-    prompt.close();
-  }
+  const detectedIds = new Set(detected.map((tool) => tool.value));
+  const selected = await searchableMultiSelect({
+    message: `Select Agent tools to set up (${AGENT_TOOLS.length} available)`,
+    pageSize: 15,
+    choices: AGENT_TOOLS.map((tool) => ({
+      name: tool.name,
+      value: tool.value,
+      detected: detectedIds.has(tool.value),
+      preSelected: detectedIds.has(tool.value),
+    })),
+    validate: (values) =>
+      values.length > 0 || "Select at least one Agent tool",
+  });
+  return selectTools(selected.join(","));
 }
 
 const CAPABILITIES = {
@@ -88,6 +84,10 @@ function writeError(error: KTeachError): void {
 function option(args: string[], name: string): string | undefined {
   const index = args.indexOf(name);
   return index >= 0 ? args[index + 1] : undefined;
+}
+
+async function resolveTeach(args: string[]): Promise<string> {
+  return resolveWorkspaceRoot(process.cwd(), option(args, "--teach"));
 }
 
 function publisherOptions(
@@ -113,14 +113,28 @@ export async function main(args: string[]): Promise<number> {
       const projectRoot = path.resolve(process.cwd(), targetArg ?? ".");
       const toolsValue = option(args, "--tools");
       const tools = await chooseTools(projectRoot, toolsValue);
-      await initializeWorkspace(projectRoot);
+      await initializeWorkspace(projectRoot, option(args, "--teach") ?? "main");
       await installAgentIntegrations(projectRoot, tools, CLI_VERSION);
-      process.stdout.write("Learning Workspace and Agent Integrations created.\n");
+      process.stdout.write("Learning Project, initial Teach, and Agent Integrations created.\n");
       if (process.env.npm_command === "exec") {
         process.stdout.write(
           "For persistent Agent use, run: npm install -g k-teach@latest\n",
         );
       }
+      return 0;
+    }
+    if (command === "teach" && args[1] === "create") {
+      const teachId = args[2];
+      if (!teachId || teachId.startsWith("-")) {
+        throw new KTeachError(
+          "validation-failed",
+          "A Teach ID is required.",
+          "Run k-teach teach create <id>.",
+        );
+      }
+      const projectRoot = await resolveProjectRoot(process.cwd());
+      const teachRoot = await initializeTeach(projectRoot, teachId);
+      process.stdout.write(`Teach created at ${teachRoot}\n`);
       return 0;
     }
     if (command === "--version" || command === "version") {
@@ -143,9 +157,8 @@ export async function main(args: string[]): Promise<number> {
     }
     if (command === "update") {
       const targetArg = args[1]?.startsWith("-") ? undefined : args[1];
-      const projectRoot = path.resolve(process.cwd(), targetArg ?? ".");
-      const workspaceRoot = await resolveWorkspaceRoot(projectRoot);
-      await assertWorkspaceIsCurrent(workspaceRoot);
+      const requestedRoot = path.resolve(process.cwd(), targetArg ?? ".");
+      const projectRoot = await resolveProjectRoot(requestedRoot);
       const tools = await configuredTools(projectRoot);
       if (tools.length === 0) {
         throw new KTeachError(
@@ -163,24 +176,26 @@ export async function main(args: string[]): Promise<number> {
       return 0;
     }
     if (command === "validate") {
-      const workspaceRoot = await resolveWorkspaceRoot(process.cwd());
+      const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
+      const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const userConfigDir =
         process.env.XDG_CONFIG_HOME ??
         `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
-      await resolveConfig({ cwd: workspaceRoot, userConfigDir });
+      await resolveConfig({ cwd: configRoot, userConfigDir });
       await validateLessonBundles(workspaceRoot);
-      process.stdout.write("Learning Workspace is valid.\n");
+      process.stdout.write("Teach is valid.\n");
       return 0;
     }
     if (command === "render" && args[1] === "web") {
-      const workspaceRoot = await resolveWorkspaceRoot(process.cwd());
+      const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
+      const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const userConfigDir =
         process.env.XDG_CONFIG_HOME ??
         `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
       const config = await resolveConfig({
-        cwd: workspaceRoot,
+        cwd: configRoot,
         userConfigDir,
       });
       const output = await renderWeb(workspaceRoot, config.output_dir);
@@ -209,7 +224,7 @@ export async function main(args: string[]): Promise<number> {
       return 0;
     }
     if (command === "visuals" && args[1] === "register") {
-      const workspaceRoot = await resolveWorkspaceRoot(process.cwd());
+      const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
       const planIndex = args.indexOf("--plan");
       const resultIndex = args.indexOf("--result");
@@ -231,8 +246,9 @@ export async function main(args: string[]): Promise<number> {
       return 0;
     }
     if (command === "wechat" && args[1] === "render") {
-      const workspaceRoot = await resolveWorkspaceRoot(process.cwd());
+      const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
+      const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const briefIndex = args.indexOf("--brief");
       const brief = briefIndex >= 0 ? args[briefIndex + 1] : undefined;
       if (!brief) {
@@ -246,7 +262,7 @@ export async function main(args: string[]): Promise<number> {
         process.env.XDG_CONFIG_HOME ??
         `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
       const config = await resolveConfig({
-        cwd: workspaceRoot,
+        cwd: configRoot,
         userConfigDir,
       });
       const output = await renderWechat(
@@ -258,11 +274,12 @@ export async function main(args: string[]): Promise<number> {
       return 0;
     }
     if (command === "doctor" && args[1] === "wechat") {
-      const workspaceRoot = await resolveWorkspaceRoot(process.cwd());
+      const workspaceRoot = await resolveTeach(args);
+      const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const userConfigDir =
         process.env.XDG_CONFIG_HOME ??
         `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
-      const config = await resolveConfig({ cwd: workspaceRoot, userConfigDir });
+      const config = await resolveConfig({ cwd: configRoot, userConfigDir });
       const account = option(args, "--account") ?? config.wechat_account;
       if (!account) {
         throw new KTeachError(
@@ -276,13 +293,14 @@ export async function main(args: string[]): Promise<number> {
       return 0;
     }
     if (command === "wechat" && args[1] === "draft") {
-      const workspaceRoot = await resolveWorkspaceRoot(process.cwd());
+      const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
+      const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const brief = option(args, "--brief");
       const userConfigDir =
         process.env.XDG_CONFIG_HOME ??
         `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
-      const config = await resolveConfig({ cwd: workspaceRoot, userConfigDir });
+      const config = await resolveConfig({ cwd: configRoot, userConfigDir });
       const account = option(args, "--account") ?? config.wechat_account;
       if (!brief || !account) {
         throw new KTeachError(
@@ -300,7 +318,7 @@ export async function main(args: string[]): Promise<number> {
       return 0;
     }
     if (command === "wechat" && ["preview", "publish", "status"].includes(args[1] ?? "")) {
-      const workspaceRoot = await resolveWorkspaceRoot(process.cwd());
+      const workspaceRoot = await resolveTeach(args);
       const attemptId = option(args, "--attempt");
       if (!attemptId) {
         throw new KTeachError(
@@ -347,7 +365,8 @@ export async function main(args: string[]): Promise<number> {
       return 0;
     }
     if (command === "preview") {
-      const workspaceRoot = await resolveWorkspaceRoot(process.cwd());
+      const workspaceRoot = await resolveTeach(args);
+      const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const portIndex = args.indexOf("--port");
       const parsedPort =
         portIndex >= 0 ? Number(args[portIndex + 1]) : Number.NaN;
@@ -356,7 +375,7 @@ export async function main(args: string[]): Promise<number> {
         process.env.XDG_CONFIG_HOME ??
         `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
       const config = await resolveConfig({
-        cwd: workspaceRoot,
+        cwd: configRoot,
         userConfigDir,
       });
       const output = await renderWeb(workspaceRoot, config.output_dir);
@@ -384,6 +403,15 @@ export async function main(args: string[]): Promise<number> {
     if (error instanceof KTeachError) {
       writeError(error);
       return 2;
+    }
+    if (
+      error instanceof Error &&
+      (error.name === "ExitPromptError" ||
+        error.name === "AbortError" ||
+        error.message.includes("force closed the prompt with SIGINT"))
+    ) {
+      process.stderr.write("Cancelled.\n");
+      return 130;
     }
     throw error;
   }

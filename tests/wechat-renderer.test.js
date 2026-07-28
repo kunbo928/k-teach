@@ -37,7 +37,7 @@ async function runCli(args, cwd) {
 test("wechat render derives a validated article only from an explicit Publication Brief", async () => {
   const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-wechat-"));
   assert.equal((await runCli(["init", "--tools", "none"], workspace)).exitCode, 0);
-  const lesson = path.join(workspace, "k-teach", "lessons", "event-loop");
+  const lesson = path.join(workspace, "teachs", "main", "lessons", "event-loop");
   await mkdir(path.join(lesson, "exercises"), { recursive: true });
   await mkdir(path.join(lesson, "media", "diagrams"), { recursive: true });
   await writeFile(
@@ -168,7 +168,7 @@ feedback: 当前任务结束后先清空微任务队列。
 `,
   );
   await writeFile(
-    path.join(workspace, "k-teach", "publications", "event-loop-public.yaml"),
+    path.join(workspace, "teachs", "main", "publications", "event-loop-public.yaml"),
     `schema_version: 1
 id: event-loop-public
 revision: 2026-07-27T01:00:00Z
@@ -200,7 +200,8 @@ authorized_for_publication: false
   assert.equal(result.exitCode, 0, result.stderr);
   const output = path.join(
     workspace,
-    "k-teach",
+    "teachs",
+    "main",
     ".k-teach",
     "output",
     "wechat",

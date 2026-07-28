@@ -66,11 +66,11 @@ Create a diagram that explains the state transitions in this lesson.
 
 ## Teaching model
 
-### Learning Workspace
+### Learning Project and Teach
 
-A persistent local workspace for one topic and one mission. It stores the
-mission, trusted resources, glossary, stable preferences, learning records,
-Lesson Bundles, and rendered artifacts.
+A Learning Project contains multiple isolated Teachs. Each Teach has one
+mission and independently stores trusted resources, glossary, stable
+preferences, learning records, Lesson Bundles, and rendered artifacts.
 
 ### Lesson Bundle
 
@@ -122,11 +122,12 @@ cd your-learning-project
 k-teach init
 ```
 
-`init` creates the durable `k-teach/` Learning Workspace and generates
-project-level integrations for detected or selected Agents. For automation:
+`init` creates `.k-teach/config.yaml`, the `teachs/` collection, an initial
+Teach, and project-level integrations for detected or selected Agents. For automation:
 
 ```bash
-k-teach init --tools codex,claude
+k-teach init --tools codex,claude --teach mathematics
+k-teach teach create photography
 ```
 
 For a one-time trial, `npx k-teach init --tools ...` is supported. Persistent

@@ -55,9 +55,9 @@ K Teach 指导 Agent 完成完整的教学循环：
 
 ## 教学模型
 
-### Learning Workspace
+### Learning Project 与 Teach
 
-一个主题对应一个学习使命的持久化本地工作空间。它保存学习使命、可信资料、术语表、稳定偏好、学习记录、Lesson Bundle 和渲染产物。
+一个 Learning Project 可以包含多门互相隔离的 Teach。每门 Teach 对应一个学习使命，并独立保存可信资料、术语表、稳定偏好、学习记录、Lesson Bundle 和渲染产物。
 
 ### Lesson Bundle
 
@@ -99,11 +99,12 @@ cd your-learning-project
 k-teach init
 ```
 
-`init` 会创建持久的 `k-teach/` Learning Workspace，并为检测到或显式选择的
-Agent 生成项目级集成。自动化场景可以使用：
+`init` 会创建项目级 `.k-teach/config.yaml`、`teachs/` 集合、初始 Teach，
+并为检测到或显式选择的 Agent 生成项目级集成。自动化场景可以使用：
 
 ```bash
-k-teach init --tools codex,claude
+k-teach init --tools codex,claude --teach mathematics
+k-teach teach create photography
 ```
 
 支持使用 `npx k-teach init --tools ...` 做一次性试用；generated Skill 会通过
@@ -129,7 +130,7 @@ k-teach/
 
 K Teach 包含一个小型确定性 CLI，供 Skill 执行需要可复现、可测试的操作：
 
-- 初始化和校验 Learning Workspace；
+- 初始化 Learning Project，创建并校验独立 Teach；
 - 渲染 Web Lesson 和结构化教学图解；
 - 预览本地课程；
 - 登记外部生成的视觉资产；

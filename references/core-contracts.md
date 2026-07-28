@@ -2,14 +2,15 @@
 
 ## Authority
 
-The Learning Workspace owns persistent state. A Lesson Bundle is the only
+The Learning Project owns project configuration and Agent Integrations. Each
+Teach under `teachs/<teach-id>/` owns independent learning state. A Lesson Bundle is the only
 authoritative source for one lesson. Design Profiles, rendered artifacts, and
 publication attempts are derived records and must never silently write back.
 
 ## Lesson Bundle
 
 ```text
-lessons/<lesson-id>/
+teachs/<teach-id>/lessons/<lesson-id>/
 ├── lesson.yaml
 ├── lesson.md
 ├── exercises/

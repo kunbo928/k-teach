@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://k-teach.local/schemas/workspace.schema.json",
-  "title": "Learning Workspace configuration",
+  "title": "Learning Project configuration",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "design_profile", "output_dir", "visuals"],
