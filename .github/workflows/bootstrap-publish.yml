@@ -1,0 +1,43 @@
+name: Bootstrap first npm release
+
+on:
+  push:
+    tags:
+      - "v0.0.1"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm@latest
+      - run: node scripts/verify-release.mjs
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          npm run typecheck
+          npm test
+      - id: pack
+        run: |
+          npm pack --json > pack-result.json
+          TARBALL="$(node -e 'const fs=require("fs"); const result=JSON.parse(fs.readFileSync("pack-result.json","utf8")); process.stdout.write(result[0].filename)')"
+          node scripts/verify-tarball.mjs "$TARBALL"
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+      - name: Publish bootstrap tarball
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_BOOTSTRAP }}
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+        run: npm publish "$TARBALL" --access public --provenance

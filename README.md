@@ -114,21 +114,24 @@ operation.
 
 ## Installation
 
-Install K Teach with the open Agent Skills CLI:
+Install the persistent CLI globally, then initialize the target project:
 
 ```bash
-npx skills add kunbo928/k-teach
+npm install -g k-teach@latest
+cd your-learning-project
+k-teach init
 ```
 
-The CLI detects supported agents and installs the Skill at project scope by
-default. To make it available globally:
+`init` creates the durable `k-teach/` Learning Workspace and generates
+project-level integrations for detected or selected Agents. For automation:
 
 ```bash
-npx skills add kunbo928/k-teach --global
+k-teach init --tools codex,claude
 ```
 
-After installation, restart or reload your agent environment if needed, then
-ask your agent to use K Teach for a teaching task.
+For a one-time trial, `npx k-teach init --tools ...` is supported. Persistent
+Agent use still requires the global CLI because generated Skills invoke
+`k-teach` through `PATH`.
 
 ## Repository structure
 
@@ -162,11 +165,13 @@ that should be reproducible and testable:
 The CLI supports the Skill; it does not decide what to teach.
 
 ```bash
-node bin/k-teach.js capabilities --json
-node bin/k-teach.js init
-node bin/k-teach.js validate
-node bin/k-teach.js render web
-node bin/k-teach.js preview
+k-teach capabilities --json
+k-teach tools --json
+k-teach init --tools codex,claude
+k-teach update
+k-teach validate
+k-teach render web
+k-teach preview
 ```
 
 ## Development

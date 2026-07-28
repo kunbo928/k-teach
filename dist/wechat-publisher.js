@@ -9,58 +9,58 @@ import {
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 
-                                                                        
+
 import { KTeachError,                } from "./errors.js";
 import { validateDocument } from "./schema.js";
 
 const OFFICIAL_API_BASE_URL = "https://api.weixin.qq.com";
 
-                       
-                
-                    
- 
 
-                                         
-              
-                       
-                           
-                      
-                    
- 
 
-                                 
-                        
-                
-                         
-                      
- 
 
-                          
-                    
-             
-                                                             
-                  
-                
-                 
-                 
-                         
-                         
-     
-                                              
-                                   
- 
 
-                                                    
-                       
-                
-                      
-                                   
-                                        
-                                  
-                             
- 
 
-                                                                    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function aliasKey(alias        )         {
   return alias.toUpperCase().replace(/[^A-Z0-9]+/g, "_");
@@ -149,9 +149,9 @@ function cachePath(options                        )         {
 
 async function cachedToken(options                        )                              {
   try {
-    const value = JSON.parse(await readFile(cachePath(options), "utf8"))     
-                            
-                          
+    const value = JSON.parse(await readFile(cachePath(options), "utf8"))
+
+
      ;
     if (
       value.access_token &&
@@ -527,8 +527,8 @@ export async function queryWechatStatus(
     if (typeof result.article_id === "string") {
       attempt.remote_ids.article_id = result.article_id;
     }
-    const detail = result.article_detail   
-                                                  
+    const detail = result.article_detail
+
                  ;
     detail?.item?.forEach((item, index) => {
       if (item.article_url) attempt.remote_ids[`article_url_${index}`] = item.article_url;

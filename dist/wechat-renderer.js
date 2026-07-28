@@ -11,7 +11,7 @@ import { marked,                         } from "marked";
 import sharp from "sharp";
 import { parse } from "yaml";
 
-                                                                  
+
 import { renderDiagramSvg } from "./diagram-renderer.js";
 import { KTeachError } from "./errors.js";
 import { validateLessonBundles } from "./lesson-bundle.js";
@@ -26,23 +26,23 @@ const COLORS = {
   note: "#E7E8DE",
 };
 
-                         
-                                 
-                                     
- 
 
-                         
-               
-              
-                
-           
-                                                       
-                        
-                   
-                 
-                         
-    
- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function escapeHtml(value         )         {
   return String(value)

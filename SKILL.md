@@ -17,10 +17,17 @@ rendering, preview, media processing, and publication operations.
 2. Define the next lesson around a concrete capability the learner should gain.
 3. Research claims against suitable primary sources and record citations.
 4. Create or revise the Lesson Bundle without writing channel-specific content
-   back into it.
+   back into it. Store every learner action as a schema-valid
+   `exercises/*.yaml` file; never create Markdown exercise or answer-sheet
+   files, which Web rendering does not consume. Place every exercise exactly
+   once with `{{exercise:<id>}}` at the relevant point in `lesson.md`; never
+   direct the learner to open an exercise file.
 5. Choose a Learning Asset Plan: deterministic Diagram, optional generated
    visuals, or text only. Never make generated visuals a prerequisite for core
-   teaching.
+   teaching. Declare every selected local Diagram, illustration, interactive,
+   or narration in `media/assets.yaml`, then place it at the exact teaching
+   moment with `{{asset:<id>}}` in `lesson.md`. Audio requires an equivalent
+   transcript; interactive assets must remain usable through adjacent text.
 6. Render the complete local Web Lesson with the selected Field Manual profile.
 7. Create a WeChat article only when the user supplies an explicit Publication
    Brief selecting what may be public.
@@ -54,19 +61,19 @@ Publication Brief or rendering a WeChat article.
 
 ## CLI
 
-Run `node bin/k-teach.js capabilities --json` to inspect available deterministic
-capabilities. Start a workspace with `node bin/k-teach.js init`, then run
-`node bin/k-teach.js validate` before rendering. Generate the local course with
-`node bin/k-teach.js render web`. Use `node bin/k-teach.js preview` to render
+Run `k-teach capabilities --json` to inspect available deterministic
+capabilities. Start a workspace with `k-teach init`, then run
+`k-teach validate` before rendering. Generate the local course with
+`k-teach render web`. Use `k-teach preview` to render
 again and serve the course only on `127.0.0.1`.
 Render a validated Diagram Spec with
-`node bin/k-teach.js render diagram path/to/spec.yaml`; use `--output` only
+`k-teach render diagram path/to/spec.yaml`; use `--output` only
 when the default `.k-teach/output/diagrams/` is not suitable.
 Register an externally generated visual with
-`node bin/k-teach.js visuals register --plan <plan.yaml> --result <result.yaml>`.
+`k-teach visuals register --plan <plan.yaml> --result <result.yaml>`.
 The CLI validates and records the output; it never invokes the provider.
 Render an explicit Publication Brief with
-`node bin/k-teach.js wechat render --brief <brief-id>`. This produces only
+`k-teach wechat render --brief <brief-id>`. This produces only
 local article, preview, cover, media, and manifest files.
 For an explicitly requested remote WeChat operation, read
 [wechat-rendering.md](references/wechat-rendering.md), run `doctor wechat`,

@@ -10,6 +10,8 @@ setTimeout(() => console.log("定时器"), 0);
 Promise.resolve().then(() => console.log("微任务"));
 ```
 
+{{exercise:predict-basic-order}}
+
 ## 写出理由
 
 只写顺序不够。说明每次选择下一个任务时，运行时正在检查什么。

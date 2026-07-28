@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/embedded-assets.schema.json",
+  "title": "Embedded Learning Assets",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "lesson_id", "lesson_revision", "assets"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "lesson_id": { "type": "string", "minLength": 1 },
+    "lesson_revision": { "type": "string", "minLength": 1 },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "source", "title", "description"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["diagram", "illustration", "interactive", "audio"] },
+          "source": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "transcript": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

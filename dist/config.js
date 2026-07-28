@@ -3,21 +3,21 @@ import path from "node:path";
 
 import { KTeachError } from "./errors.js";
 
-                                                     
 
-                               
-                    
-                         
-                     
-                      
-                          
- 
 
-                                          
-              
-                        
-                                                      
- 
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const DEFAULT_CONFIG               = {
   schema_version: 1,
@@ -100,7 +100,7 @@ function assertConfig(
     throw new KTeachError(
       "invalid-workspace",
       "Configuration does not match schema version 1.",
-      "Run k-teach init in an empty directory or correct k-teach.yaml.",
+      "Run k-teach init in a new project or correct k-teach/config.yaml.",
     );
   }
 }
@@ -112,7 +112,7 @@ export async function resolveConfig(
     path.join(options.userConfigDir, "config.yaml"),
   );
   const workspace = await readOptionalYaml(
-    path.join(options.cwd, "k-teach.yaml"),
+    path.join(options.cwd, "config.yaml"),
   );
   const resolved                          = {
     ...DEFAULT_CONFIG,

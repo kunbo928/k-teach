@@ -91,20 +91,23 @@ K Teach 可以生成：
 
 ## 安装
 
-使用开放的 Agent Skills CLI 安装 K Teach：
+先全局安装持久 CLI，再初始化目标项目：
 
 ```bash
-npx skills add kunbo928/k-teach
+npm install -g k-teach@latest
+cd your-learning-project
+k-teach init
 ```
 
-CLI 会自动检测支持的 Agent，并默认安装到当前项目。如果要全局安装：
+`init` 会创建持久的 `k-teach/` Learning Workspace，并为检测到或显式选择的
+Agent 生成项目级集成。自动化场景可以使用：
 
 ```bash
-npx skills add kunbo928/k-teach --global
+k-teach init --tools codex,claude
 ```
 
-安装完成后，如有需要，重新加载 Agent 环境，然后直接要求你的 Agent 使用
-K Teach 完成教学任务。
+支持使用 `npx k-teach init --tools ...` 做一次性试用；generated Skill 会通过
+`PATH` 调用 `k-teach`，因此持久 Agent 使用仍需要全局 CLI。
 
 ## 仓库结构
 
@@ -136,11 +139,13 @@ K Teach 包含一个小型确定性 CLI，供 Skill 执行需要可复现、可�
 CLI 服务于 Skill，但不负责决定教什么。
 
 ```bash
-node bin/k-teach.js capabilities --json
-node bin/k-teach.js init
-node bin/k-teach.js validate
-node bin/k-teach.js render web
-node bin/k-teach.js preview
+k-teach capabilities --json
+k-teach tools --json
+k-teach init --tools codex,claude
+k-teach update
+k-teach validate
+k-teach render web
+k-teach preview
 ```
 
 ## 开发

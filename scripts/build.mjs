@@ -23,7 +23,9 @@ for (const file of sourceFiles) {
   const javascript = stripTypeScriptTypes(source, {
     mode: "strip",
     sourceUrl: `k-teach/src/${file}`,
-  }).replaceAll(/(from\s+["'][^"']+)\.ts(["'])/g, "$1.js$2");
+  })
+    .replaceAll(/(from\s+["'][^"']+)\.ts(["'])/g, "$1.js$2")
+    .replace(/[ \t]+$/gm, "");
   await writeFile(
     path.join(outputRoot, file.replace(/\.ts$/, ".js")),
     javascript,

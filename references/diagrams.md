@@ -39,7 +39,7 @@ encode meaning only with color.
 Run:
 
 ```sh
-node bin/k-teach.js render diagram path/to/spec.yaml
+k-teach render diagram path/to/spec.yaml
 ```
 
 Pass `--output <directory>` when the default

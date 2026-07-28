@@ -13,13 +13,30 @@ lessons/<lesson-id>/
 ├── lesson.yaml
 ├── lesson.md
 ├── exercises/
+│   └── NNNN-exercise.yaml
 └── media/
+    ├── assets.yaml
+    └── ...
 ```
 
 `lesson.yaml` identifies the lesson, revision, mission, objectives, sources,
 composition mode, and asset plan. `lesson.md` contains semantic teaching
-content. Exercises and media remain addressable inputs rather than embedded
-channel output.
+content. Each exercise is YAML with `schema_version`, `id`, `prompt`, `answer`,
+and `feedback`; Markdown exercise and answer-sheet files are invalid because
+renderers cannot consume them. Exercises and media remain addressable inputs
+rather than embedded channel output.
+
+`media/assets.yaml` declares Embedded Learning Assets. `lesson.md` places each
+asset at a semantic teaching moment with `{{asset:<id>}}`. Diagram and
+illustration assets render as accessible figures, interactive assets as
+sandboxed local documents, and audio assets as local players with mandatory
+text transcripts. Missing media, stale lesson revisions, undeclared markers,
+and declared-but-unused assets invalidate the Lesson Bundle.
+
+Each exercise YAML is likewise placed exactly once with
+`{{exercise:<id>}}`. The Web renderer expands it inline into the learner's
+reading flow; it never collects exercises in a detached sidebar or tells the
+learner to open source files.
 
 ## Rendering
 

@@ -6,47 +6,47 @@ import { parse } from "yaml";
 
 import { KTeachError } from "./errors.js";
 import { validateDocument } from "./schema.js";
-                                                
 
-                 
-           
-                  
-           
-                 
-                    
-             
 
-                         
-             
-                   
-                  
-                 
-                             
- 
 
-                             
-                    
-             
-                    
-                          
-                          
- 
 
-                                
-                    
-                  
-                   
-                                          
-                 
-                             
-                      
-                                                        
-                                                                
- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 async function readYamlDocument(
-  schema 
-                           
+  schema
+
                               ,
   filePath        ,
 )                   {
@@ -180,11 +180,11 @@ export async function registerVisualAsset(
   return recordPath;
 }
 
-                                   
-                     
-                           
-                              
- 
+
+
+
+
+
 
 export async function resolveVisualAssets(
   root        ,
@@ -288,15 +288,15 @@ export async function resolveVisualAssets(
         { errors: recordErrors },
       );
     }
-    const typed = record     
-                      
-                       
-                        
-                              
-                     
-                                 
-                          
-                           
+    const typed = record
+
+
+
+
+
+
+
+
      ;
     if (
       typed.plan_id !== plan.id ||

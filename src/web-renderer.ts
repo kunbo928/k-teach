@@ -10,26 +10,50 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { marked } from "marked";
+import markedKatex from "marked-katex-extension";
 import { parse } from "yaml";
 
 import type { LessonBundle } from "./domain.ts";
+import {
+  resolveEmbeddedAssets,
+  type EmbeddedAsset,
+} from "./embedded-assets.ts";
 import { KTeachError } from "./errors.ts";
-import { validateLessonBundles } from "./lesson-bundle.ts";
-import { validateDocument } from "./schema.ts";
+import {
+  readExercises,
+  validateLessonBundles,
+  type Exercise,
+} from "./lesson-bundle.ts";
 import { resolveVisualAssets } from "./visuals.ts";
 
-interface Exercise {
-  schema_version: 1;
-  id: string;
-  prompt: string;
-  answer: string;
-  feedback: string;
-}
+marked.use(
+  markedKatex({
+    throwOnError: false,
+    output: "htmlAndMathml",
+  }),
+  {
+    renderer: {
+      image({ href, text, title }) {
+        const source = href.startsWith("../media/")
+          ? escapeHtml(href)
+          : safeHttpUrl(href);
+        const caption = title || text;
+        return `<figure class="lesson-figure">
+  <img src="${source}" alt="${escapeHtml(text)}" loading="lazy">
+  ${caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : ""}
+</figure>`;
+      },
+    },
+  },
+);
 
 interface RenderedLesson {
+  directory: string;
   metadata: LessonBundle;
   markdown: string;
   exercises: Exercise[];
+  embeddedAssets: Map<string, EmbeddedAsset>;
+  mediaFiles: Array<{ relativePath: string; bytes: Buffer }>;
   inputHash: string;
   warnings: string[];
 }
@@ -50,25 +74,33 @@ function safeHttpUrl(value: string): string {
   return escapeHtml(url.href);
 }
 
-async function readExercises(directory: string): Promise<Exercise[]> {
-  const files = (await readdir(directory).catch(() => []))
-    .filter((file) => file.endsWith(".yaml") || file.endsWith(".yml"))
-    .sort();
-  const exercises: Exercise[] = [];
-  for (const file of files) {
-    const value = parse(await readFile(path.join(directory, file), "utf8"));
-    const errors = await validateDocument("exercise", value);
-    if (errors.length > 0) {
+async function readMediaFiles(
+  directory: string,
+  prefix = "",
+): Promise<Array<{ relativePath: string; bytes: Buffer }>> {
+  const entries = await readdir(directory, { withFileTypes: true }).catch(
+    () => [],
+  );
+  const files: Array<{ relativePath: string; bytes: Buffer }> = [];
+  for (const entry of entries.sort((left, right) =>
+    left.name.localeCompare(right.name),
+  )) {
+    const relativePath = path.posix.join(prefix, entry.name);
+    const source = path.join(directory, entry.name);
+    if (entry.isSymbolicLink()) {
       throw new KTeachError(
         "invalid-bundle",
-        `${file}: ${errors.join("; ")}.`,
-        "Correct the exercise and run validate again.",
-        { file, errors },
+        `Lesson media cannot contain symbolic links: media/${relativePath}.`,
+        "Replace the link with a local media file and render again.",
       );
     }
-    exercises.push(value as Exercise);
+    if (entry.isDirectory()) {
+      files.push(...(await readMediaFiles(source, relativePath)));
+    } else if (entry.isFile() && entry.name !== ".gitkeep") {
+      files.push({ relativePath, bytes: await readFile(source) });
+    }
   }
-  return exercises;
+  return files;
 }
 
 async function loadLessons(root: string): Promise<RenderedLesson[]> {
@@ -85,19 +117,42 @@ async function loadLessons(root: string): Promise<RenderedLesson[]> {
         "utf8",
       );
       const markdown = await readFile(path.join(directory, "lesson.md"), "utf8");
-      const exercises = await readExercises(path.join(directory, "exercises"));
+      const exercises = await readExercises(
+        path.join(directory, "exercises"),
+        entry.name,
+      );
       const metadata = parse(metadataText) as LessonBundle;
       const visuals = await resolveVisualAssets(root, directory, metadata);
+      const embedded = await resolveEmbeddedAssets(
+        directory,
+        metadata,
+        markdown,
+      );
+      const mediaFiles = await readMediaFiles(path.join(directory, "media"));
       return {
+        directory,
         metadata,
         markdown,
         exercises,
+        embeddedAssets: embedded.assets,
+        mediaFiles,
         warnings: visuals.warnings,
         inputHash: createHash("sha256")
           .update(metadataText)
           .update(markdown)
           .update(JSON.stringify(exercises))
+          .update(
+            mediaFiles
+              .map(({ relativePath, bytes }) =>
+                createHash("sha256")
+                  .update(relativePath)
+                  .update(bytes)
+                  .digest("hex"),
+              )
+              .join(":"),
+          )
           .update(visuals.inputFingerprint)
+          .update(embedded.inputFingerprint)
           .digest("hex"),
       };
     }),
@@ -149,6 +204,7 @@ function documentShell(title: string, body: string, assetPrefix: string): string
   <meta name="color-scheme" content="light dark">
   <title>${escapeHtml(title)}</title>
   <link rel="stylesheet" href="${assetPrefix}assets/field-manual.css">
+  <link rel="stylesheet" href="${assetPrefix}assets/katex.min.css">
   <script src="${assetPrefix}assets/field-manual.js" defer></script>
 </head>
 <body>
@@ -164,16 +220,29 @@ function documentShell(title: string, body: string, assetPrefix: string): string
 
 function renderLesson(lesson: RenderedLesson): string {
   const metadata = lesson.metadata;
-  const semanticMarkdown = lesson.markdown.replace(/^#\s+[^\n]+\n+/, "");
+  const mediaPrefix = `../media/${encodeURIComponent(metadata.id)}/`;
+  const exercisesById = new Map(
+    lesson.exercises.map((exercise, index) => [
+      exercise.id,
+      renderExercise(exercise, index),
+    ]),
+  );
+  const semanticMarkdown = lesson.markdown
+    .replace(/^#\s+[^\n]+\n+/, "")
+    .replaceAll(/\]\(media\//g, `](${mediaPrefix}`)
+    .replace(
+      /\{\{asset:([A-Za-z0-9][A-Za-z0-9_-]*)\}\}/g,
+      (_marker, id: string) =>
+        renderEmbeddedAsset(lesson.embeddedAssets.get(id)!, mediaPrefix),
+    )
+    .replace(
+      /\{\{exercise:([A-Za-z0-9][A-Za-z0-9_-]*)\}\}/g,
+      (_marker, id: string) => exercisesById.get(id)!,
+    );
   const content = marked.parse(semanticMarkdown, {
     gfm: true,
     async: false,
   }) as string;
-  const practice = lesson.exercises.length
-    ? `<aside class="practice" aria-label="练习"><h2>现在练习</h2>${lesson.exercises
-        .map(renderExercise)
-        .join("")}</aside>`
-    : "";
   const modeLabel = {
     reading: "概念阅读",
     workshop: "实践课",
@@ -193,10 +262,34 @@ function renderLesson(lesson: RenderedLesson): string {
   <noscript><p class="no-js-notice">JavaScript 未启用。正文、题目和答案仍可阅读，但自动反馈与本地主题偏好不可用。</p></noscript>
   <div class="lesson-body">
     <article class="lesson-content">${content}${renderSources(metadata)}</article>
-    ${practice}
   </div>
 </main>`;
   return documentShell(metadata.title, body, "../");
+}
+
+function renderEmbeddedAsset(
+  asset: EmbeddedAsset,
+  mediaPrefix: string,
+): string {
+  const source = `${mediaPrefix}${asset.source.slice("media/".length)}`;
+  const heading = `<figcaption><strong>${escapeHtml(asset.title)}</strong><span>${escapeHtml(asset.description)}</span></figcaption>`;
+  if (asset.kind === "interactive") {
+    return `<figure class="lesson-figure interactive-asset">
+  <iframe src="${escapeHtml(source)}" title="${escapeHtml(asset.title)}" loading="lazy" sandbox="allow-scripts"></iframe>
+  ${heading}
+</figure>`;
+  }
+  if (asset.kind === "audio") {
+    return `<figure class="lesson-figure audio-asset">
+  <audio controls preload="metadata" src="${escapeHtml(source)}">你的浏览器不支持音频播放。</audio>
+  ${heading}
+  <details class="asset-transcript"><summary>阅读语音文字稿</summary><p>${escapeHtml(asset.transcript ?? "")}</p></details>
+</figure>`;
+  }
+  return `<figure class="lesson-figure">
+  <img src="${escapeHtml(source)}" alt="${escapeHtml(asset.description)}" loading="lazy">
+  ${heading}
+</figure>`;
 }
 
 function renderIndex(lessons: RenderedLesson[]): string {
@@ -229,14 +322,24 @@ export async function renderWeb(root: string, outputDir: string): Promise<string
   const output = path.resolve(root, outputDir, "web");
   const lessonsOutput = path.join(output, "lessons");
   const assetsOutput = path.join(output, "assets");
+  const fontsOutput = path.join(assetsOutput, "fonts");
+  const mediaOutput = path.join(output, "media");
   await Promise.all([
     mkdir(lessonsOutput, { recursive: true }),
     mkdir(assetsOutput, { recursive: true }),
+    mkdir(fontsOutput, { recursive: true }),
+    mkdir(mediaOutput, { recursive: true }),
   ]);
   const assetRoot = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../assets/field-manual",
   );
+  const katexCss = fileURLToPath(import.meta.resolve("katex/dist/katex.min.css"));
+  const katexFonts = fileURLToPath(import.meta.resolve("katex/dist/fonts/KaTeX_Main-Regular.woff2"));
+  const katexFontsRoot = path.dirname(katexFonts);
+  const katexFontFiles = (await readdir(katexFontsRoot))
+    .filter((file) => /\.(?:ttf|woff2?)$/.test(file))
+    .sort();
   await Promise.all([
     copyFile(
       path.join(assetRoot, "field-manual.css"),
@@ -246,6 +349,10 @@ export async function renderWeb(root: string, outputDir: string): Promise<string
       path.join(assetRoot, "field-manual.js"),
       path.join(assetsOutput, "field-manual.js"),
     ),
+    copyFile(katexCss, path.join(assetsOutput, "katex.min.css")),
+    ...katexFontFiles.map((file) =>
+      copyFile(path.join(katexFontsRoot, file), path.join(fontsOutput, file)),
+    ),
     writeFile(path.join(output, "index.html"), renderIndex(lessons), "utf8"),
     ...lessons.map((lesson) =>
       writeFile(
@@ -253,6 +360,17 @@ export async function renderWeb(root: string, outputDir: string): Promise<string
         renderLesson(lesson),
         "utf8",
       ),
+    ),
+    ...lessons.flatMap((lesson) =>
+      lesson.mediaFiles.map(async ({ relativePath, bytes }) => {
+        const destination = path.join(
+          mediaOutput,
+          lesson.metadata.id,
+          ...relativePath.split("/"),
+        );
+        await mkdir(path.dirname(destination), { recursive: true });
+        await writeFile(destination, bytes);
+      }),
     ),
   ]);
   const aggregateHash = createHash("sha256")
@@ -275,6 +393,14 @@ export async function renderWeb(root: string, outputDir: string): Promise<string
           ...lessons.map((lesson) => `lessons/${lesson.metadata.id}.html`),
           "assets/field-manual.css",
           "assets/field-manual.js",
+          "assets/katex.min.css",
+          ...katexFontFiles.map((file) => `assets/fonts/${file}`),
+          ...lessons.flatMap((lesson) =>
+            lesson.mediaFiles.map(
+              ({ relativePath }) =>
+                `media/${lesson.metadata.id}/${relativePath}`,
+            ),
+          ),
         ],
         capabilities_used: ["lesson-bundle", "web"],
         warnings: lessons.flatMap((lesson) => lesson.warnings),

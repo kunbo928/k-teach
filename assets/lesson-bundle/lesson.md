@@ -8,9 +8,12 @@ Write a short retrieval prompt that activates relevant prior knowledge.
 
 Add source-grounded semantic teaching content.
 
+Place declared media at the exact teaching moment with `{{asset:asset-id}}`.
+
 ## Apply it
 
-Point to a realistic task defined in `exercises/`.
+Place each realistic task at the point of practice with
+`{{exercise:exercise-id}}`.
 
 ## Retrieve without looking back
 

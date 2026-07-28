@@ -17,7 +17,7 @@ test("config precedence is CLI, workspace, user, then defaults", async () => {
     "output_dir: user-output\nvisuals: off\nwechat_account: personal\n",
   );
   await writeFile(
-    path.join(workspace, "k-teach.yaml"),
+    path.join(workspace, "config.yaml"),
     "schema_version: 1\noutput_dir: workspace-output\nvisuals: auto\n",
   );
 
@@ -39,7 +39,7 @@ test("config precedence is CLI, workspace, user, then defaults", async () => {
 test("config rejects unknown keys and secret-shaped keys", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "k-teach-secret-"));
   await writeFile(
-    path.join(root, "k-teach.yaml"),
+    path.join(root, "config.yaml"),
     "schema_version: 1\napp_secret: should-not-live-here\n",
   );
 

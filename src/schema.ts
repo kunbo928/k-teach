@@ -14,6 +14,7 @@ export type SchemaName =
   | "learning-asset-plan"
   | "visual-provider-result"
   | "visual-asset-record"
+  | "embedded-assets"
   | "wechat-artifact-manifest";
 
 interface JsonSchema {

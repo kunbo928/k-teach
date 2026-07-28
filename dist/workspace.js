@@ -43,7 +43,9 @@ Record stable teaching preferences and useful working context here.
 };
 
 export async function initializeWorkspace(root        )                {
-  const configPath = path.join(root, "k-teach.yaml");
+  const workspaceRoot = path.join(root, "k-teach");
+  await mkdir(workspaceRoot, { recursive: true });
+  const configPath = path.join(workspaceRoot, "config.yaml");
 
   try {
     await writeFile(configPath, DEFAULT_CONFIG, {
@@ -57,14 +59,10 @@ export async function initializeWorkspace(root        )                {
       "code" in error &&
       error.code === "EEXIST"
     ) {
-      throw new KTeachError(
-        "invalid-workspace",
-        "k-teach.yaml already exists; initialization stopped.",
-        "Run validate, or choose an empty directory.",
-        { path: configPath },
-      );
+      // User-owned configuration is preserved on repeated init.
+    } else {
+      throw error;
     }
-    throw error;
   }
 
   await Promise.all(
@@ -76,16 +74,35 @@ export async function initializeWorkspace(root        )                {
       "media",
       ".k-teach/artifacts",
       ".k-teach/attempts",
-    ].map((directory) => mkdir(path.join(root, directory), { recursive: true })),
-  );
-  await Promise.all(
-    Object.entries(WORKSPACE_DOCUMENTS).map(([file, content]) =>
-      writeFile(path.join(root, file), content, {
-        encoding: "utf8",
-        flag: "wx",
-      }),
+    ].map((directory) =>
+      mkdir(path.join(workspaceRoot, directory), { recursive: true }),
     ),
   );
+  await Promise.all(
+    Object.entries(WORKSPACE_DOCUMENTS).map(async ([file, content]) => {
+      try {
+        await writeFile(path.join(workspaceRoot, file), content, {
+          encoding: "utf8",
+          flag: "wx",
+        });
+      } catch (error) {
+        if (
+          !error ||
+          typeof error !== "object" ||
+          !("code" in error) ||
+          error.code !== "EEXIST"
+        ) {
+          throw error;
+        }
+      }
+    }),
+  );
+}
+
+export async function resolveWorkspaceRoot(projectRoot        )                  {
+  const nested = path.join(projectRoot, "k-teach");
+  if (await exists(path.join(nested, "config.yaml"))) return nested;
+  return nested;
 }
 
 async function exists(filePath        )                   {
@@ -98,20 +115,33 @@ async function exists(filePath        )                   {
 }
 
 export async function assertWorkspaceIsCurrent(root        )                {
-  if (await exists(path.join(root, "k-teach.yaml"))) return;
-  const lessonsPath = path.join(root, "lessons");
+  if (await exists(path.join(root, "config.yaml"))) return;
+  const projectRoot = path.dirname(root);
+  if (await exists(path.join(projectRoot, "k-teach.yaml"))) {
+    throw new KTeachError(
+      "invalid-workspace",
+      "unsupported root-level K Teach workspace detected.",
+      "Choose a new project directory and run k-teach init.",
+    );
+  }
+  const lessonsPath = path.join(projectRoot, "lessons");
   const lessonFiles = await readdir(lessonsPath).catch(() => []);
   const legacyMarkers =
-    (await exists(path.join(root, "MISSION.md"))) &&
+    (await exists(path.join(projectRoot, "MISSION.md"))) &&
     lessonFiles.some((file) => file.endsWith(".html"));
   if (legacyMarkers) {
     throw new KTeachError(
       "invalid-workspace",
-      "legacy Learning Workspace detected.",
-      "Run k-teach migrate --dry-run to review the proposed Lesson Bundle migration.",
+      "unsupported legacy Learning Workspace detected.",
+      "Choose a new project directory and run k-teach init.",
       { format: "learn-with-taste", lesson_count: lessonFiles.length },
     );
   }
+  throw new KTeachError(
+    "invalid-workspace",
+    "K Teach Learning Workspace not found.",
+    "Run k-teach init --tools <tools>.",
+  );
 }
 
 export async function previewLegacyMigration(root        )                    {

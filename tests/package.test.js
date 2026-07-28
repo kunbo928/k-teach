@@ -9,6 +9,25 @@ import test from "node:test";
 const execFileAsync = promisify(execFile);
 const packageRoot = path.resolve(".");
 
+test("package metadata identifies the public MIT release and vendored notices", async () => {
+  const manifest = JSON.parse(
+    await readFile(path.join(packageRoot, "package.json"), "utf8"),
+  );
+
+  assert.equal(manifest.name, "k-teach");
+  assert.equal(manifest.version, "0.0.1");
+  assert.equal(manifest.private, false);
+  assert.equal(manifest.license, "MIT");
+  assert.equal(
+    manifest.repository.url,
+    "git+https://github.com/kunbo928/k-teach.git",
+  );
+  for (const file of ["LICENSE", "THIRD_PARTY_NOTICES.md", "UPSTREAM.md"]) {
+    assert.ok(manifest.files.includes(file));
+    assert.equal((await stat(path.join(packageRoot, file))).isFile(), true);
+  }
+});
+
 test("npm build emits a JavaScript CLI that runs without the TypeScript source tree", async () => {
   assert.equal((await stat(path.join(packageRoot, "dist", "cli.js"))).isFile(), true);
   assert.doesNotMatch(
@@ -31,4 +50,10 @@ test("npm build emits a JavaScript CLI that runs without the TypeScript source t
     optional: ["visual-provider", "wechat"],
     visual_modes: ["auto", "required", "off"],
   });
+  const version = await execFileAsync(
+    process.execPath,
+    [path.join(packageRoot, "bin", "k-teach.js"), "--version"],
+    { cwd: workspace, encoding: "utf8" },
+  );
+  assert.equal(version.stdout.trim(), "0.0.1");
 });

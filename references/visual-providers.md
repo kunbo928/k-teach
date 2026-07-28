@@ -17,7 +17,7 @@ part of the core teaching path. It validates and registers provider output.
 6. Register it:
 
 ```sh
-node bin/k-teach.js visuals register \
+k-teach visuals register \
   --plan lessons/<lesson>/media/visual-plan.yaml \
   --result lessons/<lesson>/media/<asset>.result.yaml
 ```

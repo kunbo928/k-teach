@@ -12,7 +12,7 @@ never read into the article.
 Render locally:
 
 ```sh
-node bin/k-teach.js wechat render --brief <brief-id>
+k-teach wechat render --brief <brief-id>
 ```
 
 Output lives under `.k-teach/output/wechat/<brief-id>/`:
@@ -66,15 +66,15 @@ Never pass secrets as command arguments. Diagnose token reachability without
 creating content:
 
 ```sh
-node bin/k-teach.js doctor wechat --account <alias>
+k-teach doctor wechat --account <alias>
 ```
 
 Create a draft from an already-rendered and eligible artifact, then optionally
 send it to one explicit OpenID:
 
 ```sh
-node bin/k-teach.js wechat draft --brief <brief-id> --account <alias>
-node bin/k-teach.js wechat preview --attempt <attempt-id> --openid <openid>
+k-teach wechat draft --brief <brief-id> --account <alias>
+k-teach wechat preview --attempt <attempt-id> --openid <openid>
 ```
 
 The recipient is stored only as a SHA-256 audit hash. Public publishing requires
@@ -82,8 +82,8 @@ both Publication Brief authorization and a current interactive terminal. It has
 no non-interactive confirmation bypass:
 
 ```sh
-node bin/k-teach.js wechat publish --attempt <attempt-id> --live
-node bin/k-teach.js wechat status --attempt <attempt-id>
+k-teach wechat publish --attempt <attempt-id> --live
+k-teach wechat status --attempt <attempt-id>
 ```
 
 Type the exact phrase shown by the CLI only after reviewing account, title,

@@ -55,9 +55,22 @@ visually similar. Do not reveal answers through formatting.
 ## Author the Lesson Bundle
 
 Start from `assets/lesson-bundle/`. Keep channel-independent teaching content in
-`lesson.md`, metadata in `lesson.yaml`, exercises in `exercises/`, and original
-media in `media/`. Use `reading`, `workshop`, or `atlas` according to the
+`lesson.md`, metadata in `lesson.yaml`, exercises as one structured
+`exercises/*.yaml` file per learner action, and original media in `media/`.
+Every exercise YAML must define `schema_version`, `id`, `prompt`, `answer`, and
+specific `feedback`; never create Markdown answer sheets because Web rendering
+does not consume them. Place each exercise exactly once in `lesson.md` with
+`{{exercise:<id>}}` at the moment the learner should act; never point learners
+to a filesystem path. Use `reading`, `workshop`, or `atlas` according to the
 learning task, not visual novelty.
+
+For an asset that materially improves comprehension, declare it in
+`media/assets.yaml`, keep its source below `media/`, and place
+`{{asset:<id>}}` in `lesson.md` exactly where the learner needs it. Use
+`diagram` or `illustration` for figures, `interactive` for a self-contained
+sandboxed HTML learning tool, and `audio` for an optional narration file with
+an equivalent transcript. Never make audio or interaction the only route to
+the lesson's core knowledge.
 
 Run `k-teach validate` before rendering. A renderer may compress or rearrange
 content, but it cannot change facts, sources, objectives, or answer keys.

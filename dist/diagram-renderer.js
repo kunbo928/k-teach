@@ -5,7 +5,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { parse } from "yaml";
 
-                                               
+
 import { KTeachError } from "./errors.js";
 import { validateDocument } from "./schema.js";
 
@@ -15,10 +15,10 @@ const GAP = 72;
 const PADDING = 48;
 const TITLE_HEIGHT = 92;
 
-                 
-            
-            
- 
+
+
+
+
 
 function escapeXml(value         )         {
   return String(value)
@@ -60,10 +60,10 @@ function assertGraphIntegrity(spec             )       {
   }
 }
 
-function positions(spec             )   
-                             
-                
-                 
+function positions(spec             )
+
+
+
   {
   const horizontal = spec.direction === "left-to-right";
   const incoming = new Map(spec.nodes.map((node) => [node.id, 0]));

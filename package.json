@@ -1,6 +1,6 @@
 {
   "name": "k-teach",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Cross-platform Agent Skill and deterministic CLI for persistent teaching, Web Lessons, diagrams, and channel artifacts.",
   "type": "module",
   "bin": {
@@ -8,6 +8,9 @@
   },
   "files": [
     "README-zh.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "UPSTREAM.md",
     "SKILL.md",
     "agents",
     "assets",
@@ -26,14 +29,25 @@
   "engines": {
     "node": ">=22.18"
   },
-  "license": "UNLICENSED",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kunbo928/k-teach.git"
+  },
+  "homepage": "https://github.com/kunbo928/k-teach#readme",
+  "bugs": {
+    "url": "https://github.com/kunbo928/k-teach/issues"
+  },
+  "license": "MIT",
+  "private": false,
   "dependencies": {
+    "katex": "^0.17.0",
     "marked": "^18.0.5",
+    "marked-katex-extension": "^5.1.10",
     "sharp": "^0.35.3",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@types/katex": "^0.16.8",
     "@types/node": "^26.1.1",
     "typescript": "^7.0.2"
   }
