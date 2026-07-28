@@ -175,6 +175,11 @@ k-teach render web
 k-teach preview
 ```
 
+Run `k-teach preview` from the Learning Project root to render and serve every
+Teach through one local Project Preview. Run it inside `teachs/<id>`, or pass
+`--teach <id>`, to preview only the selected Teach. Preview servers bind only
+to `127.0.0.1`.
+
 ## Development
 
 Clone the repository and install its development dependencies:

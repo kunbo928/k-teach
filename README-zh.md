@@ -149,6 +149,10 @@ k-teach render web
 k-teach preview
 ```
 
+在 Learning Project 根目录运行 `k-teach preview` 会通过一个本地服务预览
+全部 Teach；在 `teachs/<id>` 内运行或传入 `--teach <id>` 时，只预览选定的
+Teach。预览服务仅监听 `127.0.0.1`。
+
 ## 开发
 
 克隆仓库并安装开发依赖：

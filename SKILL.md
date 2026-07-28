@@ -71,8 +71,10 @@ capabilities. Start a Learning Project with `k-teach init`; it creates
 Create additional courses with `k-teach teach create <id>`. Run commands from
 inside `teachs/<id>` or pass `--teach <id>`. Then run `k-teach validate`
 before rendering. Generate the selected Teach with
-`k-teach render web`. Use `k-teach preview` to render
-again and serve the course only on `127.0.0.1`.
+`k-teach render web`. From the Learning Project root, use `k-teach preview`
+to render and serve a Project Preview containing every Teach. From inside
+`teachs/<id>`, or with `--teach <id>`, the same command previews only that
+Teach. Preview servers listen only on `127.0.0.1`.
 Render a validated Diagram Spec with
 `k-teach render diagram path/to/spec.yaml`; use `--output` only
 when the default `.k-teach/output/diagrams/` is not suitable.

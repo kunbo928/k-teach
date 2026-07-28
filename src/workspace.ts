@@ -1,5 +1,6 @@
-import { access, mkdir, readdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { parse } from "yaml";
 
 import { KTeachError } from "./errors.ts";
 
@@ -43,6 +44,41 @@ Record stable teaching preferences and useful working context here.
 };
 
 const TEACH_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export interface TeachSummary {
+  id: string;
+  title: string;
+  root: string;
+}
+
+export async function listTeaches(projectRoot: string): Promise<TeachSummary[]> {
+  const collectionRoot = path.join(projectRoot, "teachs");
+  const entries = await readdir(collectionRoot, { withFileTypes: true });
+  const teaches = await Promise.all(
+    entries
+      .filter((entry) => entry.isDirectory())
+      .map(async (entry) => {
+        const root = path.join(collectionRoot, entry.name);
+        try {
+          const document = parse(await readFile(path.join(root, "teach.yaml"), "utf8"));
+          if (
+            !document ||
+            typeof document !== "object" ||
+            document.id !== entry.name ||
+            typeof document.title !== "string"
+          ) {
+            return undefined;
+          }
+          return { id: entry.name, title: document.title, root };
+        } catch {
+          return undefined;
+        }
+      }),
+  );
+  return teaches
+    .filter((teach): teach is TeachSummary => teach !== undefined)
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
 
 export async function initializeTeach(
   projectRoot: string,

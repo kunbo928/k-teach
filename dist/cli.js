@@ -4,7 +4,10 @@ import { stdin, stdout } from "node:process";
 import { KTeachError } from "./errors.js";
 import { resolveConfig } from "./config.js";
 import { validateLessonBundles } from "./lesson-bundle.js";
-import { startPreviewServer } from "./preview-server.js";
+import {
+  startPreviewServer,
+  startProjectPreviewServer,
+} from "./preview-server.js";
 import { renderWeb } from "./web-renderer.js";
 import { renderDiagram } from "./diagram-renderer.js";
 import { registerVisualAsset } from "./visuals.js";
@@ -24,6 +27,7 @@ import {
   assertWorkspaceIsCurrent,
   initializeTeach,
   initializeWorkspace,
+  listTeaches,
   resolveProjectConfigRoot,
   resolveProjectRoot,
   resolveWorkspaceRoot,
@@ -365,8 +369,17 @@ export async function main(args          )                  {
       return 0;
     }
     if (command === "preview") {
-      const workspaceRoot = await resolveTeach(args);
-      const configRoot = await resolveProjectConfigRoot(workspaceRoot);
+      const requestedTeach = option(args, "--teach");
+      const projectRoot = await resolveProjectRoot(process.cwd());
+      const projectPreview =
+        requestedTeach === undefined &&
+        path.resolve(process.cwd()) === projectRoot;
+      const workspaceRoot = projectPreview
+        ? undefined
+        : await resolveTeach(args);
+      const configRoot = projectPreview
+        ? path.join(projectRoot, ".k-teach")
+        : await resolveProjectConfigRoot(workspaceRoot          );
       const portIndex = args.indexOf("--port");
       const parsedPort =
         portIndex >= 0 ? Number(args[portIndex + 1]) : Number.NaN;
@@ -378,11 +391,29 @@ export async function main(args          )                  {
         cwd: configRoot,
         userConfigDir,
       });
-      const output = await renderWeb(workspaceRoot, config.output_dir);
-      const preview = await startPreviewServer(output, {
-        host: "127.0.0.1",
-        port,
-      });
+      let preview;
+      if (projectPreview) {
+        const teaches = await listTeaches(projectRoot);
+        const rendered = await Promise.all(
+          teaches.map(async (teach) => {
+            await assertWorkspaceIsCurrent(teach.root);
+            return {
+              ...teach,
+              root: await renderWeb(teach.root, config.output_dir),
+            };
+          }),
+        );
+        preview = await startProjectPreviewServer(rendered, {
+          host: "127.0.0.1",
+          port,
+        });
+      } else {
+        const output = await renderWeb(workspaceRoot          , config.output_dir);
+        preview = await startPreviewServer(output, {
+          host: "127.0.0.1",
+          port,
+        });
+      }
       process.stdout.write(`Preview available at ${preview.url}\n`);
       await new Promise      ((resolve) => {
         const stop = () => {
