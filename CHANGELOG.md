@@ -1,5 +1,11 @@
 # k-teach
 
+## 0.3.1
+
+### Patch Changes
+
+- 7f50037: Inject the CLI version from package.json at build time so --version and generatedBy match the published release.
+
 ## 0.3.0
 
 ### Minor Changes
