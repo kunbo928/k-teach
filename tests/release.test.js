@@ -76,6 +76,11 @@ test("Changesets release workflow separates release PRs from OIDC publishing", a
 });
 
 test("release metadata gate rejects a tag that differs from package version", async () => {
+  const manifest = JSON.parse(
+    await readFile(path.join(packageRoot, "package.json"), "utf8"),
+  );
+  const versionPattern = manifest.version.replace(/\./g, "\\.");
+
   await assert.rejects(
     () =>
       execFileAsync(
@@ -89,7 +94,9 @@ test("release metadata gate rejects a tag that differs from package version", as
       ),
     (error) =>
       error.code !== 0 &&
-      /does not match package version 0\.2\.0/.test(error.stderr),
+      new RegExp(`does not match package version ${versionPattern}`).test(
+        error.stderr,
+      ),
   );
 });
 

@@ -15,7 +15,7 @@ test("package metadata identifies the public MIT release and vendored notices", 
   );
 
   assert.equal(manifest.name, "k-teach");
-  assert.equal(manifest.version, "0.2.0");
+  assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.equal(manifest.private, false);
   assert.equal(manifest.license, "MIT");
   assert.equal(
