@@ -18,6 +18,10 @@ test("build progress does not contaminate machine-readable stdout", async () => 
       path.join(packageRoot, "scripts", "build.mjs"),
       path.join(fixtureRoot, "scripts", "build.mjs"),
     );
+    await cp(
+      path.join(packageRoot, "package.json"),
+      path.join(fixtureRoot, "package.json"),
+    );
     await cp(path.join(packageRoot, "src"), path.join(fixtureRoot, "src"), {
       recursive: true,
     });

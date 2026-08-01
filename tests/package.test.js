@@ -79,5 +79,8 @@ test("npm build emits a JavaScript CLI that runs without the TypeScript source t
     [path.join(packageRoot, "bin", "k-teach.js"), "--version"],
     { cwd: workspace, encoding: "utf8" },
   );
-  assert.equal(version.stdout.trim(), "0.2.0");
+  const manifest = JSON.parse(
+    await readFile(path.join(packageRoot, "package.json"), "utf8"),
+  );
+  assert.equal(version.stdout.trim(), manifest.version);
 });

@@ -43,7 +43,7 @@ import {
 import { searchableMultiSelect } from "./searchable-multi-select.ts";
 import { TEACHING_THEME_IDS } from "./teaching-themes.ts";
 
-export const CLI_VERSION = "0.2.0";
+export const CLI_VERSION = "__K_TEACH_PACKAGE_VERSION__";
 
 async function chooseTools(
   projectRoot: string,

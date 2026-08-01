@@ -6,6 +6,13 @@ import { fileURLToPath } from "node:url";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = path.join(packageRoot, "src");
 const outputRoot = path.join(packageRoot, "dist");
+const manifest = JSON.parse(
+  await readFile(path.join(packageRoot, "package.json"), "utf8"),
+);
+
+if (typeof manifest.version !== "string" || !/^\d+\.\d+\.\d+$/.test(manifest.version)) {
+  throw new Error("package.json must contain a semantic version before building.");
+}
 
 if (path.basename(outputRoot) !== "dist" || path.dirname(outputRoot) !== packageRoot) {
   throw new Error("Refusing to build outside the package dist directory.");
@@ -25,6 +32,7 @@ for (const file of sourceFiles) {
     sourceUrl: `k-teach/src/${file}`,
   })
     .replaceAll(/(from\s+["'][^"']+)\.ts(["'])/g, "$1.js$2")
+    .replaceAll("__K_TEACH_PACKAGE_VERSION__", manifest.version)
     .replace(/[ \t]+$/gm, "");
   await writeFile(
     path.join(outputRoot, file.replace(/\.ts$/, ".js")),

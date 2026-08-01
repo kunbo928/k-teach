@@ -43,7 +43,7 @@ import {
 import { searchableMultiSelect } from "./searchable-multi-select.js";
 import { TEACHING_THEME_IDS } from "./teaching-themes.js";
 
-export const CLI_VERSION = "0.2.0";
+export const CLI_VERSION = "0.3.0";
 
 async function chooseTools(
   projectRoot        ,
