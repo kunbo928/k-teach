@@ -61,8 +61,8 @@ test("npm build emits a JavaScript CLI that runs without the TypeScript source t
     { cwd: workspace, encoding: "utf8" },
   );
   assert.deepEqual(JSON.parse(result.stdout), {
-    core: ["lesson-bundle", "web", "diagram", "ppt"],
-    optional: ["visual-provider", "wechat"],
+    core: ["lesson-bundle", "web", "diagram", "presentation-brief", "ppt", "vite-project-preview"],
+    optional: ["visual-provider", "wechat", "wechat-channel-themes", "wechat-multi-account"],
     visual_modes: ["auto", "required", "off"],
     teaching_themes: [
       "classic-manual",

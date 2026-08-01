@@ -96,6 +96,7 @@ feedback: 当前任务结束后先清空微任务队列。
     workspace,
   );
   assert.equal(result.exitCode, 0, result.stderr);
+  assert.match(result.stderr, /Migration notice.*Presentation Brief/);
   const output = path.join(
     workspace,
     "teachs",
@@ -186,5 +187,88 @@ visuals: off
     assert.match(html, new RegExp(`data-theme="${theme.id}"`));
     assert.match(html, new RegExp(theme.colors.accent, "i"));
     assert.ok(manifest.capabilities_used.includes(`theme:${theme.id}`));
+  }
+});
+
+test("Presentation Brief produces distinct teaching and talk decks as one offline HTML", async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-ppt-purpose-"));
+  assert.equal((await runCli(["init", "--tools", "none"], workspace)).exitCode, 0);
+  const teach = path.join(workspace, "teachs", "main");
+  const lesson = path.join(teach, "lessons", "purpose");
+  await mkdir(path.join(lesson, "exercises"), { recursive: true });
+  await mkdir(path.join(lesson, "media"), { recursive: true });
+  await mkdir(path.join(teach, "presentations"), { recursive: true });
+  await writeFile(path.join(lesson, "lesson.yaml"), `schema_version: 1
+id: purpose-lesson
+revision: lesson-r1
+title: 从现象到事件循环模型
+mission: 用多个教学动作建立一个可迁移的事件循环模型
+objectives:
+  - 预测异步任务顺序
+sources:
+  - title: Node.js docs
+    url: https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick
+composition: workshop
+visuals: off
+`);
+  await writeFile(path.join(lesson, "lesson.md"), `# 从现象到模型
+
+## 观察现象
+
+先观察同步输出与异步输出的差异。
+
+![队列示意](media/queue.svg)
+
+## 建立模型
+
+任务按照所属队列和检查点规则推进。
+
+## 预测练习
+
+{{exercise:predict}}
+`);
+  await writeFile(path.join(lesson, "media", "queue.svg"), '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#315c49"/></svg>');
+  await writeFile(path.join(lesson, "exercises", "predict.yaml"), `schema_version: 1
+id: predict
+prompt: 微任务和定时器谁先执行？
+answer: 微任务
+feedback: 当前任务结束后先清空微任务队列。
+`);
+  const brief = (id, purpose, theme) => `schema_version: 1
+id: ${id}
+revision: ${id}-r1
+purpose: ${purpose}
+audience: JavaScript 工程师
+learner_stage: 初学者
+duration_minutes: 30
+lesson_id: purpose-lesson
+lesson_revision: lesson-r1
+include:
+  - 观察现象
+  - 建立模型
+  - 预测练习
+exclude: []
+theme:
+  id: ${theme}
+  source: recommended
+  reason: 与用途和受众匹配
+`;
+  await writeFile(path.join(teach, "presentations", "class.yaml"), brief("class", "teaching", "active-classroom"));
+  await writeFile(path.join(teach, "presentations", "conference.yaml"), brief("conference", "talk", "editorial-desk"));
+
+  assert.equal((await runCli(["render", "ppt", "--brief", "class"], workspace)).exitCode, 0);
+  assert.equal((await runCli(["render", "ppt", "--brief", "conference"], workspace)).exitCode, 0);
+  const teaching = await readFile(path.join(teach, ".k-teach", "output", "ppt", "class", "index.html"), "utf8");
+  const talk = await readFile(path.join(teach, ".k-teach", "output", "ppt", "conference", "index.html"), "utf8");
+  assert.match(teaching, /K TEACH · TEACHING/);
+  assert.match(teaching, /微任务和定时器谁先执行/);
+  assert.match(teaching, /<aside class="notes">[\s\S]*当前任务结束后/);
+  assert.match(talk, /K TEACH · TALK/);
+  assert.doesNotMatch(talk, /微任务和定时器谁先执行|当前任务结束后/);
+  assert.match(teaching, /src="data:image\/svg\+xml;base64,/);
+  for (const html of [teaching, talk]) {
+    assert.doesNotMatch(html, /src="(?:\.\/|\.\.\/|media\/)|file:\/\/|\/Users\/|\.temp\//);
+    assert.match(html, /presenter=1|has\("presenter"\)/);
+    assert.match(html, /data-timer/);
   }
 });

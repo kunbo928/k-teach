@@ -98,9 +98,9 @@ K Teach 可以生成：
 样式正文、复制预览、封面、媒体和校验清单；PPT 生成带主题、键盘导航、总览、
 演讲者模式、备注和打印导出的 16:9 静态 HTML 演示文稿。无需安装其他 Skill。
 
-三条路径共享七套已实现的授课主题：经典手册、故事绘本、自然探索、活力课堂、
-少年实验室、编辑部和未来研究所。学习页可即时选择并按 Teach 保存偏好；公众号
-通过 Publication Brief 选择；PPT 使用 `--theme` 选择并可按 `T` 循环预览。
+学习页与 PPT 共享七套授课主题。公众号使用独立的 Channel Theme：默认交付
+“墨绿编辑部”，并在用户明确要求预览时提供“石墨极简”和“橄榄手记”两套
+结构对照；普通生成不会浪费成本生成三个候选。
 
 ## 安装
 
@@ -160,13 +160,21 @@ k-teach init --tools codex,claude
 k-teach update
 k-teach validate
 k-teach render web
-k-teach render ppt --lesson <lesson-id> --theme <theme-id>
-k-teach preview
+k-teach render ppt --brief <presentation-brief-id>
+k-teach wechat render --brief <publication-brief-id>
+k-teach wechat render-proposals --brief <publication-brief-id>
+k-teach wechat account add <alias> --app-id <id> --name <name>
+k-teach preview [--open]
 ```
 
 在 Learning Project 根目录运行 `k-teach preview` 会通过一个本地服务预览
 全部 Teach；在 `teachs/<id>` 内运行或传入 `--teach <id>` 时，只预览选定的
-Teach。预览服务仅监听 `127.0.0.1`。
+Teach。包内 Vite 统一提供 `/teachs/`、`/ppt/` 和 `/wechat/` 路由，Learning
+Project 不需要自己的 Node 依赖。预览服务仅监听 `127.0.0.1`，默认不打开浏览器。
+
+PPT 先通过 Presentation Brief 明确课堂教学或讲座分享。每份演示文稿是一个
+真正自包含的 `index.html`，图片、样式和 presenter runtime 均内嵌。公众号
+帐号可按 alias 登记多个 AppID；AppSecret 只从对应环境变量读取，绝不写入配置。
 
 ## 发布
 

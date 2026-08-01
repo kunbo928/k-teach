@@ -29,6 +29,8 @@ import { fileURLToPath } from "node:url";
 
 
 
+
+
 async function loadSchema(name            )                      {
   const url = new URL(`../schemas/${name}.schema.json`, import.meta.url);
   return JSON.parse(await readFile(fileURLToPath(url), "utf8"))              ;
@@ -102,7 +104,23 @@ export async function validateDocument(
   name            ,
   value         ,
 )                    {
-  return validateValue(await loadSchema(name), value, "");
+  let candidate = value;
+  if (
+    name === "publication-brief" &&
+    value &&
+    typeof value === "object" &&
+    (value                                ).schema_version === 1
+  ) {
+    const legacy = value                           ;
+    const { theme: _theme, ...rest } = legacy;
+    candidate = {
+      ...rest,
+      schema_version: 2,
+      channel_theme: "emerald-editorial",
+      article_type: "tutorial",
+    };
+  }
+  return validateValue(await loadSchema(name), candidate, "");
 }
 
 

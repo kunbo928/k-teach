@@ -3,6 +3,7 @@ import {
   mkdir,
   readFile,
   readdir,
+  rm,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
@@ -11,7 +12,8 @@ import { marked, type Token, type Tokens } from "marked";
 import sharp from "sharp";
 import { parse } from "yaml";
 
-import type { LessonBundle, PublicationBrief } from "./domain.ts";
+import type { ChannelThemeId, LessonBundle, PublicationBrief, PublicationBriefV1 } from "./domain.ts";
+import { migratePublicationBrief } from "./contract-migrations.ts";
 import { renderDiagramSvg } from "./diagram-renderer.ts";
 import { KTeachError } from "./errors.ts";
 import { validateLessonBundles } from "./lesson-bundle.ts";
@@ -248,7 +250,24 @@ function selectBlocks(markdown: string, brief: PublicationBrief): Token[] {
     }
     if (active && token.type !== "space") selected.push(token);
   }
-  return selected;
+  const sanitized: Token[] = [];
+  let section: Token[] = [];
+  const flush = () => {
+    if (section.length === 0) return;
+    const [heading, ...body] = section;
+    const publicBody = body.filter((token) => !(
+      token.type === "paragraph" &&
+      /^\{\{exercise:[A-Za-z0-9][A-Za-z0-9_-]*\}\}\s*$/.test((token as Tokens.Paragraph).text)
+    ));
+    if (publicBody.length > 0) sanitized.push(heading, ...publicBody);
+    section = [];
+  };
+  for (const token of selected) {
+    if (token.type === "heading" && (token as Tokens.Heading).depth === 2) flush();
+    section.push(token);
+  }
+  flush();
+  return sanitized;
 }
 
 function renderSources(
@@ -526,6 +545,52 @@ function wrapPreview(title: string, article: string): string {
 </html>`;
 }
 
+const CHANNEL_THEMES: Array<{ id: ChannelThemeId; label: string; reason: string }> = [
+  { id: "emerald-editorial", label: "墨绿编辑部", reason: "强调章节秩序、关键词和沉稳阅读感" },
+  { id: "graphite-minimal", label: "石墨极简", reason: "适合分析型文章，以留白和细线建立信息层级" },
+  { id: "olive-journal", label: "橄榄手记", reason: "适合叙事和复盘，以温暖纸感承载长文" },
+];
+
+function teachingThemeForChannel(id: ChannelThemeId): TeachingTheme {
+  return resolveTeachingTheme(id === "graphite-minimal" ? "editorial-desk" : id === "olive-journal" ? "nature-explorer" : "classic-manual");
+}
+
+function applyChannelRecipe(article: string, brief: PublicationBrief): string {
+  const theme = teachingThemeForChannel(brief.channel_theme);
+  const marker = brief.channel_theme === "emerald-editorial"
+    ? `<section style="margin:0 0 18px;padding:0 0 10px;border-bottom:1px solid ${theme.colors.line};"><p style="margin:0;font-size:12px;letter-spacing:2px;color:${theme.colors.accent};">${leaf(`精选导读 · ${brief.article_type.toUpperCase()}`)}</p></section>`
+    : brief.channel_theme === "graphite-minimal"
+      ? `<section style="margin:0 0 24px;padding:8px 0;border-top:1px solid ${theme.colors.ink};border-bottom:1px solid ${theme.colors.ink};"><p style="margin:0;text-align:center;font-size:11px;letter-spacing:3px;color:${theme.colors.muted};">${leaf(`FIELD NOTE · ${brief.article_type.toUpperCase()}`)}</p></section>`
+      : `<section style="margin:0 0 22px;padding:13px 15px;border-left:5px solid ${theme.colors.accent};background:${theme.colors.accentSoft};"><p style="margin:0;font-size:13px;letter-spacing:1px;color:${theme.colors.ink};">${leaf(`阅读手记 · ${brief.article_type.toUpperCase()}`)}</p></section>`;
+  let result = article.replace(
+    /(<section style="box-sizing:border-box;max-width:100%;[^>]+>)/,
+    `$1\n  ${marker}`,
+  );
+  if (brief.channel_theme === "graphite-minimal") {
+    result = result.replaceAll(
+      `padding-left:12px;border-left:3px solid ${theme.colors.accent}`,
+      `padding:0 0 10px;border-bottom:1px solid ${theme.colors.ink}`,
+    );
+  } else if (brief.channel_theme === "olive-journal") {
+    result = result.replaceAll(
+      `padding-left:12px;border-left:3px solid ${theme.colors.accent}`,
+      `padding:10px 12px;border-left:3px solid ${theme.colors.accent};background:${theme.colors.accentSoft}`,
+    );
+  }
+  return result;
+}
+
+function wrapProposalPreview(title: string, articles: Record<ChannelThemeId, string>, selected: ChannelThemeId): string {
+  const panels = CHANNEL_THEMES.map((theme) => `<article data-proposal="${theme.id}"${theme.id === selected ? " data-selected" : ""}><header><strong>${visibleText(theme.label)}</strong><span>${visibleText(theme.reason)}</span></header><main data-article>${articles[theme.id]}</main></article>`).join("");
+  const buttons = CHANNEL_THEMES.map((theme) => `<button type="button" data-theme="${theme.id}"${theme.id === selected ? " aria-pressed=\"true\"" : ""}>${visibleText(theme.label)}</button>`).join("");
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${visibleText(title)} · 主题方案</title><style>
+  *{box-sizing:border-box}body{margin:0;background:#111915;color:#eef4ef;font:14px/1.6 system-ui,sans-serif}.shell{min-height:100vh}.toolbar{position:sticky;top:0;z-index:4;display:flex;gap:8px;align-items:center;padding:12px 18px;background:#111915eF;border-bottom:1px solid #ffffff24}.toolbar button{padding:8px 12px;border:1px solid #ffffff38;background:transparent;color:inherit;cursor:pointer}.toolbar button[aria-pressed="true"]{background:#e7eee8;color:#193c2d}.toolbar [data-mode]{margin-left:auto}.stage{padding:28px}.stage article{display:none}.stage article[data-selected]{display:block}.stage article>header{width:min(100%,677px);margin:0 auto 12px;display:grid}.stage article>header span{color:#a9b8ae}.stage main{width:min(100%,677px);margin:auto;background:#f5f1e8;box-shadow:0 18px 60px #0008}.stage.compare{display:grid;grid-template-columns:repeat(3,minmax(360px,1fr));gap:20px;overflow:auto}.stage.compare article{display:block}.stage.compare article main{width:100%}.stage.compare article>header{width:100%}.copy{position:fixed;right:18px;bottom:18px;padding:11px 16px;border:0;background:#d6e6da;color:#173d2d;font-weight:700}
+  @media(max-width:720px){.toolbar{position:fixed;inset:auto 0 0;overflow:auto}.toolbar [data-mode]{display:none}.stage{padding:16px 12px 84px}.stage.compare{display:block}.stage.compare article:not([data-selected]){display:none}.copy{right:12px;bottom:64px}}
+  </style></head><body><section class="shell"><nav class="toolbar">${buttons}<button type="button" data-mode>并排比较</button></nav><section class="stage">${panels}</section><button class="copy" type="button" data-copy>复制当前正文</button></section><script>
+  const stage=document.querySelector(".stage"),buttons=[...document.querySelectorAll("[data-theme]")],articles=[...document.querySelectorAll("[data-proposal]")];let selected=${JSON.stringify(selected)};function choose(id){selected=id;buttons.forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.theme===id)));articles.forEach(article=>article.toggleAttribute("data-selected",article.dataset.proposal===id))}buttons.forEach(button=>button.onclick=()=>choose(button.dataset.theme));document.querySelector("[data-mode]").onclick=()=>stage.classList.toggle("compare");document.querySelector("[data-copy]").onclick=async()=>{const article=document.querySelector('[data-proposal="'+selected+'"] [data-article]');await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([article.innerHTML],{type:"text/html"}),"text/plain":new Blob([article.innerText],{type:"text/plain"})})])};choose(selected);
+  </script></body></html>`;
+}
+
 async function createCover(
   outputPath: string,
   brief: PublicationBrief,
@@ -663,6 +728,7 @@ export async function renderWechat(
   root: string,
   briefId: string,
   outputDirectory: string,
+  options: { proposals?: boolean } = {},
 ): Promise<string> {
   await validateLessonBundles(root);
   const briefPath = path.join(root, "publications", `${briefId}.yaml`);
@@ -687,7 +753,9 @@ export async function renderWechat(
       { errors: briefErrors },
     );
   }
-  const brief = briefValue as PublicationBrief;
+  const brief = migratePublicationBrief(
+    briefValue as PublicationBrief | PublicationBriefV1,
+  );
   if (brief.id !== briefId) {
     throw new KTeachError(
       "invalid-brief",
@@ -729,11 +797,11 @@ export async function renderWechat(
   const markdown = await readFile(path.join(lessonDirectory, "lesson.md"), "utf8");
   const selected = selectBlocks(markdown, brief);
   const preparedMedia = await prepareMedia(root, lessonDirectory, selected);
-  const theme = resolveTeachingTheme(brief.theme);
-  const article = applyWechatTheme(
+  const theme = teachingThemeForChannel(brief.channel_theme);
+  const article = applyChannelRecipe(applyWechatTheme(
     renderArticle(lesson, brief, selected, preparedMedia),
     theme,
-  );
+  ), brief);
   const validation = validateArticle(article, brief);
   if (!validation.eligible_for_draft) {
     throw new KTeachError(
@@ -765,11 +833,11 @@ export async function renderWechat(
     .update(briefSource)
     .digest("hex");
   const manifest = {
-    schema_version: 1,
+    schema_version: 2,
     id: `wechat-${brief.id}-${inputHash.slice(0, 12)}`,
     kind: "wechat-article",
     channel: "wechat",
-    generator: "k-teach-wechat-v1",
+    generator: "k-teach-wechat-v2",
     generated_at: brief.revision,
     lesson: { id: lesson.id, revision: lesson.revision },
     design_profile: { id: theme.id, revision: "1" },
@@ -778,6 +846,9 @@ export async function renderWechat(
       revision: brief.revision,
       authorized_for_publication: brief.authorized_for_publication,
     },
+    channel_theme: brief.channel_theme,
+    article_type: brief.article_type,
+    artifact_revision: inputHash,
     article: {
       title: brief.title,
       author: brief.author,
@@ -792,6 +863,7 @@ export async function renderWechat(
     files: [
       "article.html",
       "preview.html",
+      ...(options.proposals ? ["proposals.html", ...CHANNEL_THEMES.map((item) => `proposals/${item.id}.html`)] : []),
       "cover/cover.jpg",
       ...preparedMedia.map((media) => media.record.file),
     ],
@@ -814,7 +886,8 @@ export async function renderWechat(
     ],
     warnings: [],
     validation,
-    publication_eligibility:
+    eligible_for_draft: validation.eligible_for_draft,
+    eligible_for_publication:
       validation.eligible_for_draft && brief.authorized_for_publication,
   };
   const manifestErrors = await validateDocument(
@@ -827,6 +900,22 @@ export async function renderWechat(
       `WeChat manifest is invalid: ${manifestErrors.join("; ")}.`,
       "Correct the renderer contract and render again.",
     );
+  }
+  const proposalArticles = options.proposals ? Object.fromEntries(CHANNEL_THEMES.map((item) => [
+    item.id,
+    applyChannelRecipe(applyWechatTheme(renderArticle(lesson, { ...brief, channel_theme: item.id }, selected, preparedMedia), teachingThemeForChannel(item.id)), { ...brief, channel_theme: item.id }),
+  ])) as Record<ChannelThemeId, string> : undefined;
+  if (options.proposals) {
+    for (const [id, candidate] of Object.entries(proposalArticles as Record<ChannelThemeId, string>)) {
+      const candidateValidation = validateArticle(candidate, brief);
+      if (!candidateValidation.eligible_for_draft) throw new KTeachError("render-failed", `Channel Theme proposal ${id} failed validation.`, "Correct the independent Channel Theme renderer before previewing proposals.");
+    }
+    await mkdir(path.join(output, "proposals"), { recursive: true });
+  } else {
+    await Promise.all([
+      rm(path.join(output, "proposals.html"), { force: true }),
+      rm(path.join(output, "proposals"), { recursive: true, force: true }),
+    ]);
   }
   await Promise.all([
     writeFile(path.join(output, "article.html"), article, "utf8"),
@@ -845,6 +934,10 @@ export async function renderWechat(
       ),
       "utf8",
     ),
+    ...(options.proposals ? [
+      writeFile(path.join(output, "proposals.html"), wrapProposalPreview(brief.title, proposalArticles as Record<ChannelThemeId, string>, brief.channel_theme), "utf8"),
+      ...Object.entries(proposalArticles as Record<ChannelThemeId, string>).map(([id, candidate]) => writeFile(path.join(output, "proposals", `${id}.html`), candidate, "utf8")),
+    ] : []),
     writeFile(
       path.join(output, "manifest.json"),
       `${JSON.stringify(manifest, null, 2)}\n`,
@@ -855,4 +948,8 @@ export async function renderWechat(
     ),
   ]);
   return output;
+}
+
+export async function renderWechatProposals(root: string, briefId: string, outputDirectory: string): Promise<string> {
+  return renderWechat(root, briefId, outputDirectory, { proposals: true });
 }

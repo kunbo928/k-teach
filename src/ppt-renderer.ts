@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { marked, type Token, type Tokens } from "marked";
 import { parse } from "yaml";
 
-import type { LessonBundle } from "./domain.ts";
+import type { LessonBundle, PresentationBrief } from "./domain.ts";
+import { validateDocument } from "./schema.ts";
 import { renderDiagramSvg } from "./diagram-renderer.ts";
 import { KTeachError } from "./errors.ts";
 import {
@@ -103,6 +104,7 @@ function sectionSlides(
   markdown: string,
   exercises: Exercise[],
   media: Map<string, string>,
+  brief?: PresentationBrief,
 ): Slide[] {
   const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const tokens = marked.lexer(markdown) as Token[];
@@ -128,19 +130,25 @@ function sectionSlides(
         return block(token, media);
       })
       .join("");
+    if (brief && brief.exclude.includes(title)) return;
+    if (brief && brief.include.length > 0 && !brief.include.includes(title)) return;
+    const visibleExerciseIds = brief?.purpose === "talk" ? [] : ids;
+    const visibleBody = brief?.purpose === "talk"
+      ? bodyHtml.replace(/<section class="practice-card">[\s\S]*?<\/section>/g, "")
+      : bodyHtml;
     slides.push({
-      eyebrow: ids.length > 0 ? "PRACTICE" : "LESSON",
+      eyebrow: visibleExerciseIds.length > 0 ? "PRACTICE" : brief?.purpose === "talk" ? "KEY IDEA" : "LESSON",
       title,
-      body: bodyHtml,
-      notes: ids
+      body: visibleBody,
+      notes: `<p><strong>Intent:</strong> ${escapeHtml(brief?.purpose === "talk" ? "Advance the narrative with one clear claim or piece of evidence." : "Guide one clear teaching action in the learning sequence.")}</p><p><strong>Suggested delivery:</strong> Explain the visible content, pause for the audience, then connect it to the next slide.</p><p><strong>Transition:</strong> Continue from ${escapeHtml(title)} to the next step.</p><p><strong>Timing:</strong> 2–4 min</p>${visibleExerciseIds
         .map((id) => byId.get(id))
         .filter((exercise): exercise is Exercise => exercise !== undefined)
         .map(
           (exercise) =>
             `<p><strong>Answer:</strong> ${escapeHtml(exercise.answer)}</p><p><strong>Feedback:</strong> ${escapeHtml(exercise.feedback)}</p>`,
         )
-        .join(""),
-      layout: ids.length > 0 ? "practice" : "content",
+        .join("")}${brief?.purpose === "talk" ? "<p><strong>Optional cut:</strong> Remove this slide if the central claim remains supported.</p>" : ""}`,
+      layout: visibleExerciseIds.length > 0 ? "practice" : "content",
     });
   };
   for (const token of tokens) {
@@ -173,7 +181,6 @@ async function prepareMedia(
   root: string,
   lessonRoot: string,
   markdown: string,
-  output: string,
 ): Promise<Map<string, string>> {
   const result = new Map<string, string>();
   const unique = new Map(
@@ -183,8 +190,6 @@ async function prepareMedia(
     ]),
   );
   if (unique.size === 0) return result;
-  await mkdir(path.join(output, "media"), { recursive: true });
-  let index = 0;
   for (const href of unique.keys()) {
     if (/^[a-z]+:/i.test(href)) continue;
     const source = path.resolve(lessonRoot, href);
@@ -200,30 +205,18 @@ async function prepareMedia(
         "Move the image into the Lesson Bundle media directory.",
       );
     }
-    index += 1;
     const extension = path.extname(source).toLowerCase();
     if (extension === ".yaml" || extension === ".yml") {
       const spec = parse(await readFile(source, "utf8")) as Parameters<
         typeof renderDiagramSvg
       >[0];
-      const file = `media/${String(index).padStart(3, "0")}-diagram.svg`;
-      await writeFile(path.join(output, file), renderDiagramSvg(spec));
-      result.set(href, file);
+      const svg = Buffer.from(renderDiagramSvg(spec), "utf8").toString("base64");
+      result.set(href, `data:image/svg+xml;base64,${svg}`);
       continue;
     }
-    const safeExtension = [
-      ".png",
-      ".jpg",
-      ".jpeg",
-      ".gif",
-      ".webp",
-      ".svg",
-    ].includes(extension)
-      ? extension
-      : ".bin";
-    const file = `media/${String(index).padStart(3, "0")}${safeExtension}`;
-    await copyFile(source, path.join(output, file));
-    result.set(href, file);
+    const mime = ({ ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml" } as Record<string, string>)[extension];
+    if (!mime) throw new KTeachError("render-failed", `Unsupported presentation image: ${href}.`, "Use PNG, JPEG, GIF, WebP, SVG, or a Diagram Spec.");
+    result.set(href, `data:${mime};base64,${(await readFile(source)).toString("base64")}`);
   }
   return result;
 }
@@ -257,13 +250,14 @@ function deckHtml(
   lesson: LessonBundle,
   contentSlides: Slide[],
   theme: TeachingTheme,
+  brief?: PresentationBrief,
 ): string {
   const slides: Slide[] = [
     {
-      eyebrow: "K TEACH · PRESENTATION",
+      eyebrow: brief?.purpose === "talk" ? "K TEACH · TALK" : "K TEACH · TEACHING",
       title: lesson.title,
       body: `<p class="mission">${escapeHtml(lesson.mission)}</p><div class="objectives">${lesson.objectives.map((objective) => `<span>${escapeHtml(objective)}</span>`).join("")}</div>`,
-      notes: `<p>${escapeHtml(lesson.mission)}</p>`,
+      notes: `<p><strong>Intent:</strong> ${escapeHtml(brief?.purpose === "talk" ? "Open the narrative and establish the central claim." : "Make the learning outcome visible before instruction.")}</p><p><strong>Timing:</strong> 1–2 min</p><p>${escapeHtml(lesson.mission)}</p>`,
       layout: "cover",
     },
     ...contentSlides,
@@ -296,14 +290,14 @@ function deckHtml(
 </head>
 <body>
   <main class="deck">${slides.map(slideMarkup).join("\n")}</main><div class="progress" aria-hidden="true"></div><div class="theme-name" data-theme-name>${escapeHtml(theme.label)}</div><div class="help">← → navigate · T theme · O overview · S presenter · F fullscreen</div><div class="overview" aria-label="Slide overview"></div>
-  <section class="presenter" aria-label="Presenter mode"><button type="button">Close</button><div class="presenter-card"><h3>Current</h3><div data-current></div></div><div class="presenter-card"><h3>Next</h3><div data-next></div><h3>Notes</h3><div data-notes></div></div></section>
+  <section class="presenter" aria-label="Presenter mode"><button type="button">Close</button><div class="presenter-card"><h3>Current</h3><div data-current></div><p data-timer>00:00</p></div><div class="presenter-card"><h3>Next</h3><div data-next></div><h3>Notes</h3><div data-notes></div></div></section>
   <script>
-    const slides=[...document.querySelectorAll(".slide")],progress=document.querySelector(".progress"),overview=document.querySelector(".overview"),presenter=document.querySelector(".presenter"),themeName=document.querySelector("[data-theme-name]"),themes=${JSON.stringify(TEACHING_THEMES.map(({ id, label }) => ({ id, label })))};let current=Math.max(0,Math.min(slides.length-1,Number(location.hash.slice(1)||1)-1));
+    const slides=[...document.querySelectorAll(".slide")],progress=document.querySelector(".progress"),overview=document.querySelector(".overview"),presenter=document.querySelector(".presenter"),themeName=document.querySelector("[data-theme-name]"),themes=${JSON.stringify(TEACHING_THEMES.map(({ id, label }) => ({ id, label })))};let current=Math.max(0,Math.min(slides.length-1,Number(location.hash.slice(1)||1)-1)),started=Date.now();
     function show(index){current=Math.max(0,Math.min(slides.length-1,index));slides.forEach((slide,i)=>slide.classList.toggle("is-active",i===current));progress.style.width=((current+1)/slides.length*100)+"%";if(location.hash!==("#"+(current+1)))history.replaceState(null,"","#"+(current+1));renderPresenter()}
     slides.forEach((slide,i)=>{const button=document.createElement("button");button.innerHTML="<strong>"+String(i+1).padStart(2,"0")+"</strong><p>"+slide.querySelector("h2").textContent+"</p>";button.onclick=()=>{overview.classList.remove("is-open");show(i)};overview.append(button)});
     function renderPresenter(){presenter.querySelector("[data-current]").textContent=slides[current]?.querySelector("h2")?.textContent||"";presenter.querySelector("[data-next]").textContent=slides[current+1]?.querySelector("h2")?.textContent||"End";presenter.querySelector("[data-notes]").innerHTML=slides[current]?.querySelector(".notes")?.innerHTML||"<p>No notes.</p>"}
     function cycleTheme(){const index=themes.findIndex(theme=>theme.id===document.documentElement.dataset.theme),next=themes[(index+1)%themes.length];document.documentElement.dataset.theme=next.id;themeName.textContent=next.label}
-    document.addEventListener("keydown",event=>{if(["ArrowRight","PageDown"," "].includes(event.key)){event.preventDefault();show(current+1)}if(["ArrowLeft","PageUp"].includes(event.key)){event.preventDefault();show(current-1)}if(event.key==="Home")show(0);if(event.key==="End")show(slides.length-1);if(event.key.toLowerCase()==="t")cycleTheme();if(event.key.toLowerCase()==="o")overview.classList.toggle("is-open");if(event.key.toLowerCase()==="s")presenter.classList.toggle("is-open");if(event.key.toLowerCase()==="f")document.documentElement.requestFullscreen?.()});presenter.querySelector("button").onclick=()=>presenter.classList.remove("is-open");window.addEventListener("hashchange",()=>show(Number(location.hash.slice(1)||1)-1));show(current);
+    setInterval(()=>{const seconds=Math.floor((Date.now()-started)/1000),timer=presenter.querySelector("[data-timer]");timer.textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0")},1000);document.addEventListener("keydown",event=>{if(["ArrowRight","PageDown"," "].includes(event.key)){event.preventDefault();show(current+1)}if(["ArrowLeft","PageUp"].includes(event.key)){event.preventDefault();show(current-1)}if(event.key==="Home")show(0);if(event.key==="End")show(slides.length-1);if(event.key.toLowerCase()==="t")cycleTheme();if(event.key.toLowerCase()==="o")overview.classList.toggle("is-open");if(event.key.toLowerCase()==="s")presenter.classList.toggle("is-open");if(event.key.toLowerCase()==="f")document.documentElement.requestFullscreen?.()});presenter.querySelector("button").onclick=()=>presenter.classList.remove("is-open");window.addEventListener("hashchange",()=>show(Number(location.hash.slice(1)||1)-1));if(new URLSearchParams(location.search).has("presenter"))presenter.classList.add("is-open");show(current);
   </script>
 </body></html>`;
 }
@@ -313,6 +307,7 @@ export async function renderPpt(
   lessonId: string,
   outputDirectory: string,
   requestedTheme?: string,
+  brief?: PresentationBrief,
 ): Promise<string> {
   await validateLessonBundles(root);
   const lessonDirectories = (await readdir(path.join(root, "lessons"), {
@@ -351,7 +346,7 @@ export async function renderPpt(
     );
   }
   const theme = resolveTeachingTheme(
-    requestedTheme ??
+    brief?.theme.id ?? requestedTheme ??
       (isTeachingThemeId(teach.theme_default)
         ? teach.theme_default
         : "classic-manual"),
@@ -361,10 +356,11 @@ export async function renderPpt(
     path.join(lessonRoot, "exercises"),
     lesson.id,
   );
-  const output = path.resolve(root, outputDirectory, "ppt", lesson.id);
+  if (brief && brief.lesson_revision !== lesson.revision) throw new KTeachError("invalid-brief", "Presentation Brief targets a stale Lesson Bundle revision.", "Review the changed Lesson Bundle and create a new Presentation Brief revision.");
+  const output = path.resolve(root, outputDirectory, "ppt", brief?.id ?? lesson.id);
   await mkdir(output, { recursive: true });
-  const media = await prepareMedia(root, lessonRoot, markdown, output);
-  const contentSlides = sectionSlides(markdown, exercises, media);
+  const media = await prepareMedia(root, lessonRoot, markdown);
+  const contentSlides = sectionSlides(markdown, exercises, media, brief);
   if (contentSlides.length === 0) {
     throw new KTeachError(
       "render-failed",
@@ -376,6 +372,7 @@ export async function renderPpt(
     .update(lessonSource)
     .update(markdown)
     .update(JSON.stringify(exercises))
+    .update(brief ? JSON.stringify(brief) : "legacy-ppt")
     .digest("hex");
   const manifest = {
     schema_version: 1,
@@ -385,11 +382,12 @@ export async function renderPpt(
     design_profile_revision: `ppt-v2:${theme.id}`,
     channel: "ppt",
     input_hash: inputHash,
-    files: ["index.html", "manifest.json", ...media.values()],
+    files: ["index.html", "manifest.json"],
     capabilities_used: [
       "presentation-renderer",
       "presenter-mode",
       "speaker-notes",
+      `purpose:${brief?.purpose ?? "teaching"}`,
       `theme:${theme.id}`,
     ],
     warnings: [],
@@ -397,7 +395,7 @@ export async function renderPpt(
   await Promise.all([
     writeFile(
       path.join(output, "index.html"),
-      deckHtml(lesson, contentSlides, theme),
+      deckHtml(lesson, contentSlides, theme, brief),
     ),
     writeFile(
       path.join(output, "manifest.json"),
@@ -405,4 +403,17 @@ export async function renderPpt(
     ),
   ]);
   return output;
+}
+
+export async function renderPptFromBrief(root: string, briefId: string, outputDirectory: string): Promise<string> {
+  const sourcePath = path.join(root, "presentations", `${briefId}.yaml`);
+  let value: unknown;
+  try { value = parse(await readFile(sourcePath, "utf8")); } catch {
+    throw new KTeachError("invalid-brief", `Presentation Brief not found or invalid: ${briefId}.`, `Create presentations/${briefId}.yaml and render again.`);
+  }
+  const errors = await validateDocument("presentation-brief", value);
+  if (errors.length > 0) throw new KTeachError("invalid-brief", `${briefId}: ${errors.join("; ")}.`, "Correct the Presentation Brief and render again.");
+  const brief = value as PresentationBrief;
+  if (brief.id !== briefId) throw new KTeachError("invalid-brief", "Presentation Brief id does not match --brief.", "Use the file whose id matches the requested brief.");
+  return renderPpt(root, brief.lesson_id, outputDirectory, undefined, brief);
 }

@@ -39,16 +39,17 @@ rendering, preview, media processing, and publication operations.
 7. Produce the selected output:
    - `学习`: render the complete local Web Lesson with the selected Field Manual
      profile; this is the existing default learning experience.
-   - `公众号`: require an explicit Publication Brief, derive only its selected
-     public content, then run `k-teach wechat render --brief <brief-id>` for the
-     paste-ready layout, copy preview, cover, media, and validation manifest.
-   - `PPT`: derive the presentation from the Lesson Bundle, then run
-     `k-teach render ppt --lesson <lesson-id> [--theme <theme-id>]` for a
-     themed 16:9 HTML deck with keyboard navigation, overview, presenter mode,
-     notes, and print export.
-8. Stop at local output or draft unless the user separately authorizes a real
-   remote action. Public publishing always requires current interactive final
-   confirmation.
+   - `公众号`: create a Publication Brief V2 with a Channel Theme. Unless the
+     user explicitly asks for local-only output or theme preview, render the
+     selected/default emerald article, validate it, resolve one registered
+     account, show the draft summary, ask ordinary confirmation, and create a
+     draft. Run `render-proposals` only when preview was explicitly requested.
+   - `PPT`: first clarify `teaching` versus `talk`, then create a Presentation
+     Brief and run `k-teach render ppt --brief <brief-id>`. One teaching
+     objective may span multiple slides; answers and feedback stay in notes.
+8. A WeChat draft is the default remote endpoint for an ordinary WeChat
+   article request. Public publishing still requires explicit authorization,
+   an exact interactive confirmation, submission, and terminal status polling.
 9. Record learning results, artifact manifests, and publication attempts in the
    selected Teach.
 
@@ -102,9 +103,15 @@ Render an explicit Publication Brief with
 `k-teach wechat render --brief <brief-id>`. This produces only
 local article, preview, cover, media, and manifest files.
 Generate a native static presentation with
-`k-teach render ppt --lesson <lesson-id> [--theme <theme-id>]`. K Teach uses
-the selected or Teach-default Teaching Theme, places exercise answers in
-presenter notes, and writes the deck under `.k-teach/output/ppt/`.
+`k-teach render ppt --brief <presentation-brief-id>`. The compatibility form
+`--lesson <lesson-id> [--theme <theme-id>]` remains readable but emits a
+migration notice. Every deck is one self-contained `index.html`; media,
+styling, and runtime code are inline.
+Register and inspect WeChat accounts without storing AppSecret:
+`k-teach wechat account add <alias> --app-id <id> --name <name>` and
+`k-teach wechat account list`. Put only the alias-specific AppSecret in the
+environment. Use `k-teach wechat render-proposals --brief <id>` only for an
+explicit local theme comparison.
 For an explicitly requested remote WeChat operation, read
 [wechat-rendering.md](references/wechat-rendering.md), run `doctor wechat`,
 create a draft, and persist the returned attempt ID. Preview requires an

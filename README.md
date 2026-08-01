@@ -125,11 +125,10 @@ HTML with a copy preview and validation manifest, or a themed 16:9 static HTML
 presentation with navigation, overview, presenter notes, and print export. No
 other Skill is required.
 
-All three routes share seven implemented Teaching Themes: Classic Manual,
-Storybook, Nature Explorer, Active Classroom, Junior Lab, Editorial Desk, and
-Future Lab. Web output offers a per-Teach persisted selector, WeChat selects a
-theme in its Publication Brief, and PPT uses `--theme` plus in-deck `T`
-cycling.
+Web and PPT share seven Teaching Themes. WeChat has an independent Channel
+Theme catalog: Emerald Editorial is the default delivery, while Graphite
+Minimal and Olive Journal are generated only when the user explicitly asks to
+compare theme proposals.
 
 ## Installation
 
@@ -192,14 +191,24 @@ k-teach init --tools codex,claude
 k-teach update
 k-teach validate
 k-teach render web
-k-teach render ppt --lesson <lesson-id> --theme <theme-id>
-k-teach preview
+k-teach render ppt --brief <presentation-brief-id>
+k-teach wechat render --brief <publication-brief-id>
+k-teach wechat render-proposals --brief <publication-brief-id>
+k-teach wechat account add <alias> --app-id <id> --name <name>
+k-teach preview [--open]
 ```
 
 Run `k-teach preview` from the Learning Project root to render and serve every
 Teach through one local Project Preview. Run it inside `teachs/<id>`, or pass
-`--teach <id>`, to preview only the selected Teach. Preview servers bind only
-to `127.0.0.1`.
+`--teach <id>`, to preview only the selected Teach. The bundled Vite runtime
+serves `/teachs/`, `/ppt/`, and `/wechat/`; Learning Projects need no local
+Node setup. It binds only to `127.0.0.1` and opens a browser only with
+`--open`.
+
+A Presentation Brief distinguishes classroom teaching from a talk. Every deck
+is one genuinely self-contained `index.html`, including media, CSS, and the
+presenter runtime. Multiple WeChat AppIDs can be registered by alias; AppSecret
+is resolved only from the matching environment variable and is never stored.
 
 ## Releases
 

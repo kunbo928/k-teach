@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/wechat-accounts.schema.json",
+  "title": "WeChat Account Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "accounts"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "last_successful_alias": { "type": "string", "minLength": 1 },
+    "accounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["alias", "name", "app_id"],
+        "properties": {
+          "alias": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "app_id": { "type": "string", "minLength": 1 },
+          "last_doctor_status": { "enum": ["unknown", "credentials-ready", "token-reachable", "failed"] }
+        }
+      }
+    }
+  }
+}

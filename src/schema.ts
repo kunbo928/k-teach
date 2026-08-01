@@ -15,7 +15,9 @@ export type SchemaName =
   | "visual-provider-result"
   | "visual-asset-record"
   | "embedded-assets"
-  | "wechat-artifact-manifest";
+  | "wechat-artifact-manifest"
+  | "presentation-brief"
+  | "wechat-accounts";
 
 interface JsonSchema {
   type?: "object" | "array" | "string" | "boolean" | "number";
@@ -102,5 +104,21 @@ export async function validateDocument(
   name: SchemaName,
   value: unknown,
 ): Promise<string[]> {
-  return validateValue(await loadSchema(name), value, "");
+  let candidate = value;
+  if (
+    name === "publication-brief" &&
+    value &&
+    typeof value === "object" &&
+    (value as { schema_version?: unknown }).schema_version === 1
+  ) {
+    const legacy = value as Record<string, unknown>;
+    const { theme: _theme, ...rest } = legacy;
+    candidate = {
+      ...rest,
+      schema_version: 2,
+      channel_theme: "emerald-editorial",
+      article_type: "tutorial",
+    };
+  }
+  return validateValue(await loadSchema(name), candidate, "");
 }

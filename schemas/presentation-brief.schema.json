@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/presentation-brief.schema.json",
+  "title": "Presentation Brief",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "revision", "purpose", "audience", "duration_minutes", "lesson_id", "lesson_revision", "include", "exclude", "theme"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "revision": { "type": "string", "minLength": 1 },
+    "purpose": { "enum": ["teaching", "talk"] },
+    "audience": { "type": "string", "minLength": 1 },
+    "learner_stage": { "type": "string", "minLength": 1 },
+    "duration_minutes": { "type": "number", "minimum": 1 },
+    "lesson_id": { "type": "string", "minLength": 1 },
+    "lesson_revision": { "type": "string", "minLength": 1 },
+    "include": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "exclude": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source", "reason"],
+      "properties": {
+        "id": { "enum": ["classic-manual", "storybook", "nature-explorer", "active-classroom", "junior-lab", "editorial-desk", "future-lab"] },
+        "source": { "enum": ["explicit", "brief", "teach-default", "recommended", "fallback"] },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

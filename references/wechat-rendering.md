@@ -3,10 +3,10 @@
 Create a Publication Brief only when the user explicitly selects lesson
 content for public distribution. Save it as `publications/<brief-id>.yaml`.
 Start from [the bundled template](../assets/publication-brief/wechat.yaml).
-Set `theme` to one of the seven IDs in
-[teaching-themes.md](teaching-themes.md). The native renderer applies that
-theme’s palette, typography, geometry, editorial rhythm, cover treatment, and
-platform-safe inline components.
+Set `channel_theme` to `emerald-editorial` (default), `graphite-minimal`, or
+`olive-journal`, and set `article_type` to `tutorial`, `analysis`, or
+`narrative`. Channel Themes are independent of the seven Web/PPT Teaching
+Themes.
 
 The brief must match the current Lesson Bundle revision. `include` and
 `exclude` use exact level-two headings from `lesson.md`; exclusions win.
@@ -17,6 +17,13 @@ Render locally:
 
 ```sh
 k-teach wechat render --brief <brief-id>
+```
+
+Only when the user explicitly asks to compare themes, render all three
+candidates in one immersive/compare/responsive shell:
+
+```sh
+k-teach wechat render-proposals --brief <brief-id>
 ```
 
 Output lives under `.k-teach/output/wechat/<brief-id>/`:
@@ -52,16 +59,22 @@ manifest media entry through the official WeChat API, replace every placeholder
 with the returned WeChat URL, and upload the JPEG cover as permanent material.
 
 `authorized_for_publication: false` still permits local rendering and later
-draft preparation, but `publication_eligibility` remains false. Rendering never
+draft preparation, but `eligible_for_publication` remains false. Rendering never
 contacts WeChat and never grants publication authority.
 
 ## Official publishing
 
-Use only an account alias in workspace configuration or CLI arguments. Resolve
-credentials from:
+Register multiple account aliases in the user-level registry. AppID is allowed
+there; AppSecret is not:
+
+```sh
+k-teach wechat account add <alias> --app-id <id> --name <display-name>
+k-teach wechat account list
+```
+
+Resolve the secret from:
 
 ```text
-K_TEACH_WECHAT_<ALIAS>_APP_ID
 K_TEACH_WECHAT_<ALIAS>_APP_SECRET
 ```
 

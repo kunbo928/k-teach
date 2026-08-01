@@ -1,18 +1,17 @@
 import path from "node:path";
+import { spawn } from "node:child_process";
+import { access, readdir } from "node:fs/promises";
 import { stdin, stdout } from "node:process";
 
 import { KTeachError } from "./errors.ts";
 import { resolveConfig } from "./config.ts";
 import { validateLessonBundles } from "./lesson-bundle.ts";
-import {
-  startPreviewServer,
-  startProjectPreviewServer,
-} from "./preview-server.ts";
+import { startPreviewRuntime } from "./preview-runtime.ts";
 import { renderWeb } from "./web-renderer.ts";
 import { renderDiagram } from "./diagram-renderer.ts";
 import { registerVisualAsset } from "./visuals.ts";
-import { renderWechat } from "./wechat-renderer.ts";
-import { renderPpt } from "./ppt-renderer.ts";
+import { renderWechat, renderWechatProposals } from "./wechat-renderer.ts";
+import { renderPpt, renderPptFromBrief } from "./ppt-renderer.ts";
 import {
   confirmInteractivePublish,
   createWechatDraft,
@@ -42,6 +41,7 @@ import {
 } from "./agent-integration.ts";
 import { searchableMultiSelect } from "./searchable-multi-select.ts";
 import { TEACHING_THEME_IDS } from "./teaching-themes.ts";
+import { addWechatAccount, markWechatAccountSuccessful, maskedAppId, readWechatAccounts, requireWechatAccount } from "./wechat-accounts.ts";
 
 export const CLI_VERSION = "__K_TEACH_PACKAGE_VERSION__";
 
@@ -76,11 +76,50 @@ async function chooseTools(
 }
 
 const CAPABILITIES = {
-  core: ["lesson-bundle", "web", "diagram", "ppt"],
-  optional: ["visual-provider", "wechat"],
+  core: ["lesson-bundle", "web", "diagram", "presentation-brief", "ppt", "vite-project-preview"],
+  optional: ["visual-provider", "wechat", "wechat-channel-themes", "wechat-multi-account"],
   visual_modes: ["auto", "required", "off"],
   teaching_themes: TEACHING_THEME_IDS,
 } as const;
+
+async function resolveWechatAccountAlias(explicit: string | undefined, preferred?: string): Promise<string> {
+  if (explicit) {
+    await requireWechatAccount(explicit).catch((error) => {
+      const key = `K_TEACH_WECHAT_${explicit.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_APP_ID`;
+      if (!process.env[key]) throw error;
+    });
+    return explicit;
+  }
+  const registry = await readWechatAccounts();
+  if (registry.accounts.length === 0) {
+    if (preferred) return preferred;
+    throw new KTeachError("credential-missing", "No WeChat accounts are registered.", "Run k-teach wechat account add <alias> --app-id <id> --name <name>.");
+  }
+  if (registry.accounts.length === 1) return registry.accounts[0].alias;
+  if (!stdin.isTTY || !stdout.isTTY) throw new KTeachError("validation-failed", "Multiple WeChat accounts exist and no account was selected.", "Pass --account <alias> in non-interactive environments.");
+  const last = registry.last_successful_alias;
+  const accounts = [...registry.accounts].sort((left, right) => Number(right.alias === last) - Number(left.alias === last));
+  const selected = await searchableMultiSelect({
+    message: "Select exactly one WeChat account",
+    pageSize: 12,
+    choices: accounts.map((account) => ({
+      name: `${account.alias} · ${account.name} · ${maskedAppId(account.app_id)} · ${account.last_doctor_status ?? "unknown"}`,
+      value: account.alias,
+      detected: account.alias === last,
+      preSelected: account.alias === preferred,
+    })),
+    validate: (values) => values.length === 1 || "Select exactly one account",
+  });
+  return selected[0];
+}
+
+async function confirmDraft(summary: string): Promise<boolean> {
+  if (!stdin.isTTY || !stdout.isTTY) throw new KTeachError("validation-failed", "Creating a WeChat draft requires an interactive confirmation.", "Run the command in an interactive terminal after reviewing the account summary.");
+  const reader = (await import("node:readline/promises")).createInterface({ input: stdin, output: stdout });
+  try {
+    return (await reader.question(`${summary}\nCreate this remote draft? [y/N] `)).trim().toLowerCase() === "y";
+  } finally { reader.close(); }
+}
 
 function writeError(error: KTeachError): void {
   process.stderr.write(
@@ -93,18 +132,30 @@ function option(args: string[], name: string): string | undefined {
   return index >= 0 ? args[index + 1] : undefined;
 }
 
+function openBrowser(url: string): void {
+  const command = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
+  const commandArgs = process.platform === "win32" ? ["/c", "start", "", url] : [url];
+  const child = spawn(command, commandArgs, { detached: true, stdio: "ignore" });
+  child.unref();
+}
+
 async function resolveTeach(args: string[]): Promise<string> {
   return resolveWorkspaceRoot(process.cwd(), option(args, "--teach"));
 }
 
-function publisherOptions(
+async function publisherOptions(
   cwd: string,
   accountAlias: string,
-): WechatPublisherOptions {
+): Promise<WechatPublisherOptions> {
+  const account = await requireWechatAccount(accountAlias).catch((error) => {
+    if (process.env[`K_TEACH_WECHAT_${accountAlias.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_APP_ID`]) return undefined;
+    throw error;
+  });
   return {
     cwd,
     accountAlias,
-    credentials: resolveWechatCredentials(accountAlias),
+    accountName: account?.name,
+    credentials: resolveWechatCredentials(accountAlias, process.env, account?.app_id),
     apiBaseUrl:
       process.env.NODE_ENV === "test"
         ? process.env.K_TEACH_WECHAT_API_BASE_URL
@@ -182,6 +233,21 @@ export async function main(args: string[]): Promise<number> {
       process.stdout.write(`${JSON.stringify(CAPABILITIES)}\n`);
       return 0;
     }
+    if (command === "wechat" && args[1] === "account" && args[2] === "add") {
+      const alias = args[3];
+      const appId = option(args, "--app-id");
+      const name = option(args, "--name");
+      if (!alias || !appId || !name) throw new KTeachError("validation-failed", "Account alias, --app-id, and --name are required.", "Run k-teach wechat account add <alias> --app-id <id> --name <name>.");
+      await addWechatAccount({ alias, app_id: appId, name, last_doctor_status: "unknown" });
+      process.stdout.write(`WeChat account registered: ${alias} (${name}, ${maskedAppId(appId)})\n`);
+      return 0;
+    }
+    if (command === "wechat" && args[1] === "account" && args[2] === "list") {
+      const registry = await readWechatAccounts();
+      if (args.includes("--json")) process.stdout.write(`${JSON.stringify({ ...registry, accounts: registry.accounts.map((item) => ({ ...item, app_id: maskedAppId(item.app_id) })) })}\n`);
+      else process.stdout.write(registry.accounts.length === 0 ? "No WeChat accounts registered.\n" : `${registry.accounts.map((item) => `${item.alias}\t${item.name}\t${maskedAppId(item.app_id)}\t${item.last_doctor_status ?? "unknown"}`).join("\n")}\n`);
+      return 0;
+    }
     if (command === "validate") {
       const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
@@ -214,11 +280,12 @@ export async function main(args: string[]): Promise<number> {
       (args[1] === "ppt" || args[1] === "presentation")
     ) {
       const lesson = option(args, "--lesson");
-      if (!lesson) {
+      const brief = option(args, "--brief");
+      if (!lesson && !brief) {
         throw new KTeachError(
           "validation-failed",
-          "--lesson is required for PPT rendering.",
-          "Run k-teach render ppt --lesson <lesson-id>.",
+          "--brief is required for Presentation Brief rendering (legacy --lesson remains supported).",
+          "Run k-teach render ppt --brief <presentation-brief-id>.",
         );
       }
       const workspaceRoot = await resolveTeach(args);
@@ -228,12 +295,10 @@ export async function main(args: string[]): Promise<number> {
         process.env.XDG_CONFIG_HOME ??
         `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
       const config = await resolveConfig({ cwd: configRoot, userConfigDir });
-      const output = await renderPpt(
-        workspaceRoot,
-        lesson,
-        config.output_dir,
-        option(args, "--theme"),
-      );
+      const output = brief
+        ? await renderPptFromBrief(workspaceRoot, brief, config.output_dir)
+        : await renderPpt(workspaceRoot, lesson as string, config.output_dir, option(args, "--theme"));
+      if (!brief) process.stderr.write("Migration notice: --lesson/--theme is a compatibility path; create a Presentation Brief and use --brief.\n");
       process.stdout.write(`HTML PPT rendered to ${output}\n`);
       return 0;
     }
@@ -280,7 +345,7 @@ export async function main(args: string[]): Promise<number> {
       process.stdout.write(`Visual asset registered at ${record}\n`);
       return 0;
     }
-    if (command === "wechat" && args[1] === "render") {
+    if (command === "wechat" && ["render", "render-proposals"].includes(args[1] ?? "")) {
       const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
@@ -300,12 +365,10 @@ export async function main(args: string[]): Promise<number> {
         cwd: configRoot,
         userConfigDir,
       });
-      const output = await renderWechat(
-        workspaceRoot,
-        brief,
-        config.output_dir,
-      );
-      process.stdout.write(`WeChat article rendered to ${output}\n`);
+      const output = args[1] === "render-proposals"
+        ? await renderWechatProposals(workspaceRoot, brief, config.output_dir)
+        : await renderWechat(workspaceRoot, brief, config.output_dir);
+      process.stdout.write(`WeChat ${args[1] === "render-proposals" ? "theme proposals" : "article"} rendered to ${output}\n`);
       return 0;
     }
     if (command === "doctor" && args[1] === "wechat") {
@@ -315,15 +378,8 @@ export async function main(args: string[]): Promise<number> {
         process.env.XDG_CONFIG_HOME ??
         `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
       const config = await resolveConfig({ cwd: configRoot, userConfigDir });
-      const account = option(args, "--account") ?? config.wechat_account;
-      if (!account) {
-        throw new KTeachError(
-          "credential-missing",
-          "A WeChat account alias is required.",
-          "Pass --account <alias> or set wechat_account in k-teach/config.yaml.",
-        );
-      }
-      const report = await doctorWechat(publisherOptions(workspaceRoot, account));
+      const account = await resolveWechatAccountAlias(option(args, "--account"), config.wechat_account);
+      const report = await doctorWechat(await publisherOptions(workspaceRoot, account));
       process.stdout.write(`${JSON.stringify(report)}\n`);
       return 0;
     }
@@ -336,19 +392,23 @@ export async function main(args: string[]): Promise<number> {
         process.env.XDG_CONFIG_HOME ??
         `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
       const config = await resolveConfig({ cwd: configRoot, userConfigDir });
-      const account = option(args, "--account") ?? config.wechat_account;
-      if (!brief || !account) {
+      if (!brief) {
         throw new KTeachError(
           "validation-failed",
-          "Both --brief and a WeChat account alias are required.",
+          "--brief is required.",
           "Run k-teach wechat draft --brief <id> --account <alias>.",
         );
       }
+      const account = await resolveWechatAccountAlias(option(args, "--account"), config.wechat_account);
       const artifactDir = path.resolve(workspaceRoot, config.output_dir, "wechat", brief);
+      const registered = await requireWechatAccount(account).catch(() => undefined);
+      const approved = await confirmDraft(`WeChat draft\nAccount: ${account}${registered ? ` · ${registered.name} · ${maskedAppId(registered.app_id)}` : ""}\nBrief: ${brief}`);
+      if (!approved) throw new KTeachError("validation-failed", "WeChat draft creation was cancelled.", "The local artifact remains unchanged; rerun when ready.");
       const attempt = await createWechatDraft(
         artifactDir,
-        publisherOptions(workspaceRoot, account),
+        await publisherOptions(workspaceRoot, account),
       );
+      await markWechatAccountSuccessful(account);
       process.stdout.write(`WeChat draft created. Attempt: ${attempt.id}\n`);
       return 0;
     }
@@ -363,7 +423,7 @@ export async function main(args: string[]): Promise<number> {
         );
       }
       const stored = await readWechatAttempt(workspaceRoot, attemptId);
-      const publisher = publisherOptions(workspaceRoot, stored.account_alias);
+      const publisher = await publisherOptions(workspaceRoot, stored.account_alias);
       if (args[1] === "preview") {
         const openid = option(args, "--openid");
         if (!openid) {
@@ -422,37 +482,55 @@ export async function main(args: string[]): Promise<number> {
         cwd: configRoot,
         userConfigDir,
       });
-      let preview;
-      if (projectPreview) {
-        const teaches = await listTeaches(projectRoot);
-        const rendered = await Promise.all(
-          teaches.map(async (teach) => {
+      const teaches = projectPreview
+        ? await listTeaches(projectRoot)
+        : (await listTeaches(projectRoot)).filter(
+            (teach) => teach.root === workspaceRoot,
+          );
+      const rendered = await Promise.all(
+        teaches.map(async (teach) => {
             await assertWorkspaceIsCurrent(teach.root);
             return {
               ...teach,
+              artifactRoot: path.resolve(teach.root, config.output_dir),
               root: await renderWeb(teach.root, config.output_dir),
             };
           }),
-        );
-        preview = await startProjectPreviewServer(rendered, {
-          host: "127.0.0.1",
-          port,
-        });
-      } else {
-        const output = await renderWeb(workspaceRoot as string, config.output_dir);
-        preview = await startPreviewServer(output, {
-          host: "127.0.0.1",
-          port,
-        });
-      }
+      );
+      const preview = await startPreviewRuntime({
+        projectRoot,
+        teaches: rendered,
+        host: "127.0.0.1",
+        port,
+        onInputChange: async (file) => {
+          const affected = teaches.filter((teach) => {
+            const relative = path.relative(teach.root, file);
+            return relative === "" || (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`));
+          });
+          for (const teach of affected) {
+            await renderWeb(teach.root, config.output_dir);
+            const presentationIds = await readdir(path.join(teach.root, "presentations")).then((files) => files.filter((name) => name.endsWith(".yaml")).map((name) => name.slice(0, -5)), () => []);
+            for (const id of presentationIds) await renderPptFromBrief(teach.root, id, config.output_dir);
+            const publicationIds = await readdir(path.join(teach.root, "publications")).then((files) => files.filter((name) => name.endsWith(".yaml")).map((name) => name.slice(0, -5)), () => []);
+            for (const id of publicationIds) {
+              const proposals = path.resolve(teach.root, config.output_dir, "wechat", id, "proposals.html");
+              if (await access(proposals).then(() => true, () => false)) await renderWechatProposals(teach.root, id, config.output_dir);
+              else await renderWechat(teach.root, id, config.output_dir);
+            }
+          }
+        },
+      });
+      for (const notice of preview.notices) process.stderr.write(`${notice}\n`);
       process.stdout.write(`Preview available at ${preview.url}\n`);
-      await new Promise<void>((resolve) => {
+      if (args.includes("--open")) openBrowser(preview.url);
+      if (preview.reused) return 0;
+      await Promise.race([preview.closed, new Promise<void>((resolve) => {
         const stop = () => {
           void preview.close().then(resolve);
         };
         process.once("SIGINT", stop);
         process.once("SIGTERM", stop);
-      });
+      })]);
       return 0;
     }
 

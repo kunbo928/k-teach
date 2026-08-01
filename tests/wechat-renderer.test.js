@@ -179,9 +179,9 @@ audience: 刚开始学习 JavaScript 异步机制的读者
 angle: 用任务队列建立可预测的执行模型
 include:
   - 建立模型
+  - 现在练习
 exclude:
   - 不要发布
-  - 现在练习
 theme: field-manual
 author: K Teach
 summary: 从任务所在的队列出发，建立可复用的事件循环判断方法。
@@ -230,7 +230,11 @@ authorized_for_publication: false
   assert.equal(manifest.validation.errors.length, 0);
   assert.equal(manifest.validation.warnings.length, 0);
   assert.equal(manifest.validation.eligible_for_draft, true);
-  assert.equal(manifest.publication_eligibility, false);
+  assert.equal(manifest.schema_version, 2);
+  assert.equal(manifest.channel_theme, "emerald-editorial");
+  assert.equal(manifest.article_type, "tutorial");
+  assert.equal(manifest.eligible_for_draft, true);
+  assert.equal(manifest.eligible_for_publication, false);
   assert.ok(manifest.capabilities_used.includes("visual-provider"));
   assert.equal(manifest.media[0].source, "visual-asset:queue-cover");
   assert.deepEqual(manifest.article, {
@@ -246,4 +250,35 @@ authorized_for_publication: false
     content_hash: manifest.media[1].content_hash,
   });
   assert.deepEqual(await validateDocument("wechat-artifact-manifest", manifest), []);
+
+  const proposalsResult = await runCli(
+    ["wechat", "render-proposals", "--brief", "event-loop-public"],
+    workspace,
+  );
+  assert.equal(proposalsResult.exitCode, 0, proposalsResult.stderr);
+  const proposals = await readFile(path.join(output, "proposals.html"), "utf8");
+  assert.match(proposals, /墨绿编辑部|emerald-editorial/);
+  assert.match(proposals, /石墨极简|graphite-minimal/);
+  assert.match(proposals, /橄榄手记|olive-journal/);
+  assert.match(proposals, /并排比较/);
+  assert.match(proposals, /@media\(max-width:720px\)/);
+  assert.match(proposals, /article\.innerHTML/);
+  const candidates = await Promise.all(
+    ["emerald-editorial", "graphite-minimal", "olive-journal"].map((id) =>
+      readFile(path.join(output, "proposals", `${id}.html`), "utf8"),
+    ),
+  );
+  assert.equal(new Set(candidates).size, 3);
+  assert.match(candidates[0], /精选导读/);
+  assert.match(candidates[1], /FIELD NOTE/);
+  assert.match(candidates[2], /阅读手记/);
+  for (const candidate of candidates) {
+    assert.match(candidate, /^<section style=/);
+    assert.doesNotMatch(candidate, /<script|<style|<div|class=|问题|练习|答案|学习进度/i);
+    assert.doesNotMatch(candidate, /\.temp|\/Users\/|file:\/\//);
+  }
+  const finalOnly = await runCli(["wechat", "render", "--brief", "event-loop-public"], workspace);
+  assert.equal(finalOnly.exitCode, 0, finalOnly.stderr);
+  await assert.rejects(() => stat(path.join(output, "proposals.html")), { code: "ENOENT" });
+  await assert.rejects(() => stat(path.join(output, "proposals")), { code: "ENOENT" });
 });

@@ -10,6 +10,12 @@ export type TeachingThemeId =
   | "junior-lab"
   | "editorial-desk"
   | "future-lab";
+export type PresentationPurpose = "teaching" | "talk";
+export type ChannelThemeId =
+  | "emerald-editorial"
+  | "graphite-minimal"
+  | "olive-journal";
+export type WechatArticleType = "tutorial" | "analysis" | "narrative";
 
 export interface DiagramSpec {
   schema_version: 1;
@@ -48,7 +54,26 @@ export interface DesignProfile {
   themes: Array<"paper" | "night" | "print">;
 }
 
-export interface PublicationBrief {
+export interface PresentationBrief {
+  schema_version: 1;
+  id: string;
+  revision: Revision;
+  purpose: PresentationPurpose;
+  audience: string;
+  learner_stage?: string;
+  duration_minutes: number;
+  lesson_id: string;
+  lesson_revision: Revision;
+  include: string[];
+  exclude: string[];
+  theme: {
+    id: TeachingThemeId;
+    source: "explicit" | "brief" | "teach-default" | "recommended" | "fallback";
+    reason: string;
+  };
+}
+
+export interface PublicationBriefV1 {
   schema_version: 1;
   id: string;
   revision: Revision;
@@ -64,6 +89,38 @@ export interface PublicationBrief {
   summary: string;
   cover: { mode: "generated" | "visual-asset"; asset_id?: string };
   authorized_for_publication: boolean;
+}
+
+export interface PublicationBrief {
+  schema_version: 2;
+  id: string;
+  revision: Revision;
+  lesson_id: string;
+  lesson_revision: Revision;
+  title: string;
+  audience: string;
+  angle: string;
+  include: string[];
+  exclude: string[];
+  channel_theme: ChannelThemeId;
+  article_type: WechatArticleType;
+  author: string;
+  summary: string;
+  cover: { mode: "generated" | "visual-asset"; asset_id?: string };
+  authorized_for_publication: boolean;
+}
+
+export interface WechatAccount {
+  alias: string;
+  name: string;
+  app_id: string;
+  last_doctor_status?: "unknown" | "credentials-ready" | "token-reachable" | "failed";
+}
+
+export interface WechatAccountRegistry {
+  schema_version: 1;
+  accounts: WechatAccount[];
+  last_successful_alias?: string;
 }
 
 export interface ArtifactManifest {
@@ -94,7 +151,7 @@ export type PublicationState =
   | "unknown";
 
 export interface PublicationAttempt {
-  schema_version: 1;
+  schema_version: 2;
   id: string;
   artifact_id: string;
   account_alias: string;
@@ -103,7 +160,16 @@ export interface PublicationAttempt {
   artifact_dir: string;
   title: string;
   media_count: number;
-  publication_eligibility: boolean;
+  artifact_revision: Revision;
+  account: { alias: string; name: string; app_id_suffix: string };
+  authorization: {
+    brief_id: string;
+    brief_revision: Revision;
+    authorized_for_publication: boolean;
+  };
+  current_operation: "none" | "upload-media" | "create-draft" | "send-preview" | "submit-publish" | "poll-status";
+  eligible_for_draft: boolean;
+  eligible_for_publication: boolean;
   media_uploads: Record<string, string>;
   last_checked_at?: string;
   error_code?: string;

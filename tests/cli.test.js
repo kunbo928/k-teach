@@ -17,11 +17,12 @@ const execFileAsync = promisify(execFile);
 const cliPath = path.resolve("bin/k-teach.js");
 const fixturesPath = path.resolve("tests/fixtures");
 
-async function runCli(args, cwd) {
+async function runCli(args, cwd, environment = {}) {
   try {
     const result = await execFileAsync(process.execPath, [cliPath, ...args], {
       cwd,
       encoding: "utf8",
+      env: { ...process.env, ...environment },
     });
     return { ...result, exitCode: 0 };
   } catch (error) {
@@ -32,6 +33,22 @@ async function runCli(args, cwd) {
     };
   }
 }
+
+test("wechat account CLI registers and lists masked user-level accounts", async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-account-cli-"));
+  const configHome = path.join(workspace, "config");
+  const environment = { XDG_CONFIG_HOME: configHome };
+  const added = await runCli(["wechat", "account", "add", "editorial", "--app-id", "wx123456789", "--name", "编辑部"], workspace, environment);
+  assert.equal(added.exitCode, 0, added.stderr);
+  assert.match(added.stdout, /editorial.*编辑部.*456789/);
+  const listed = await runCli(["wechat", "account", "list", "--json"], workspace, environment);
+  assert.equal(listed.exitCode, 0, listed.stderr);
+  const registry = JSON.parse(listed.stdout);
+  assert.equal(registry.accounts[0].alias, "editorial");
+  assert.match(registry.accounts[0].app_id, /456789$/);
+  assert.doesNotMatch(registry.accounts[0].app_id, /^wx123456789$/);
+  assert.doesNotMatch(await readFile(path.join(configHome, "k-teach", "wechat-accounts.yaml"), "utf8"), /secret/i);
+});
 
 test("init creates a valid Learning Project and initial Teach without overwriting content", async () => {
   const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-init-"));
@@ -141,8 +158,8 @@ test("capabilities reports deterministic core and optional boundaries", async ()
 
   assert.equal(result.exitCode, 0);
   assert.deepEqual(JSON.parse(result.stdout), {
-    core: ["lesson-bundle", "web", "diagram", "ppt"],
-    optional: ["visual-provider", "wechat"],
+    core: ["lesson-bundle", "web", "diagram", "presentation-brief", "ppt", "vite-project-preview"],
+    optional: ["visual-provider", "wechat", "wechat-channel-themes", "wechat-multi-account"],
     visual_modes: ["auto", "required", "off"],
     teaching_themes: [
       "classic-manual",

@@ -12,6 +12,10 @@ import { createInterface } from "node:readline/promises";
 import type { PublicationAttempt, PublicationState } from "./domain.ts";
 import { KTeachError, type ErrorCode } from "./errors.ts";
 import { validateDocument } from "./schema.ts";
+import {
+  migratePublicationAttempt,
+  migrateWechatArtifactManifest,
+} from "./contract-migrations.ts";
 
 const OFFICIAL_API_BASE_URL = "https://api.weixin.qq.com";
 
@@ -26,6 +30,7 @@ export interface WechatPublisherOptions {
   credentials: Credentials;
   apiBaseUrl?: string;
   cacheDir?: string;
+  accountName?: string;
 }
 
 export interface PublishSummary {
@@ -36,7 +41,7 @@ export interface PublishSummary {
 }
 
 interface WechatArtifact {
-  schema_version: 1;
+  schema_version: 2;
   id: string;
   article: { title: string; author: string; digest: string };
   files: string[];
@@ -47,14 +52,16 @@ interface WechatArtifact {
     content_hash: string;
   }>;
   validation: { eligible_for_draft: boolean };
-  publication_eligibility: boolean;
+  artifact_revision: string;
+  publication_brief: { id: string; revision: string; authorized_for_publication: boolean };
+  eligible_for_draft: boolean;
+  eligible_for_publication: boolean;
 }
 
 interface StoredAttempt extends PublicationAttempt {
   artifact_dir: string;
   title: string;
   media_count: number;
-  publication_eligibility: boolean;
   media_uploads: Record<string, string>;
   preview_recipient_hash?: string;
   unknown_operation?: string;
@@ -69,15 +76,16 @@ function aliasKey(alias: string): string {
 export function resolveWechatCredentials(
   accountAlias: string,
   environment: NodeJS.ProcessEnv = process.env,
+  registeredAppId?: string,
 ): Credentials {
   const prefix = `K_TEACH_WECHAT_${aliasKey(accountAlias)}`;
-  const appId = environment[`${prefix}_APP_ID`];
+  const appId = registeredAppId ?? environment[`${prefix}_APP_ID`];
   const appSecret = environment[`${prefix}_APP_SECRET`];
   if (!appId || !appSecret) {
     throw new KTeachError(
       "credential-missing",
       `WeChat credentials are not configured for account alias ${accountAlias}.`,
-      `Set ${prefix}_APP_ID and ${prefix}_APP_SECRET in the process environment.`,
+      registeredAppId ? `Set ${prefix}_APP_SECRET in the process environment.` : `Register the account AppID or set ${prefix}_APP_ID, then set ${prefix}_APP_SECRET in the process environment.`,
       { account_alias: accountAlias },
     );
   }
@@ -116,7 +124,8 @@ async function saveAttempt(
 
 async function loadAttempt(cwd: string, id: string): Promise<StoredAttempt> {
   try {
-    return JSON.parse(await readFile(attemptPath(cwd, id), "utf8")) as StoredAttempt;
+    const value = JSON.parse(await readFile(attemptPath(cwd, id), "utf8")) as Record<string, unknown>;
+    return migratePublicationAttempt(value) as unknown as StoredAttempt;
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
       throw new KTeachError(
@@ -293,12 +302,24 @@ async function runWrite<T>(
   operation: string,
   callback: () => Promise<T>,
 ): Promise<T> {
+  const operations: Record<string, StoredAttempt["current_operation"]> = {
+    "create-draft": "create-draft",
+    "send-preview": "send-preview",
+    "submit-publish": "submit-publish",
+    "poll-status": "poll-status",
+  };
+  attempt.current_operation = operations[operation] ?? "none";
+  await saveAttempt(options.cwd, attempt);
   try {
-    return await callback();
+    const result = await callback();
+    attempt.current_operation = "none";
+    await saveAttempt(options.cwd, attempt);
+    return result;
   } catch (error) {
     if (error instanceof KTeachError && error.code !== "remote-unknown") {
       attempt.state = "failed";
       attempt.error_code = error.code;
+      attempt.current_operation = "none";
       await saveAttempt(options.cwd, attempt);
       throw error;
     }
@@ -314,9 +335,12 @@ export async function createWechatDraft(
   artifactDir: string,
   options: WechatPublisherOptions,
 ): Promise<StoredAttempt> {
-  const manifest = JSON.parse(
+  const manifestValue = JSON.parse(
     await readFile(path.join(artifactDir, "manifest.json"), "utf8"),
-  ) as WechatArtifact;
+  ) as Record<string, unknown>;
+  const manifest = migrateWechatArtifactManifest(
+    manifestValue,
+  ) as unknown as WechatArtifact;
   if (!manifest.validation?.eligible_for_draft) {
     throw new KTeachError(
       "validation-failed",
@@ -325,14 +349,28 @@ export async function createWechatDraft(
     );
   }
   const attempt: StoredAttempt = {
-    schema_version: 1,
+    schema_version: 2,
     id: `wechat-${randomUUID()}`,
     artifact_id: manifest.id,
+    artifact_revision: manifest.artifact_revision,
     artifact_dir: path.resolve(artifactDir),
     account_alias: options.accountAlias,
+    account: {
+      alias: options.accountAlias,
+      name: options.accountName ?? options.accountAlias,
+      app_id_suffix: options.credentials.appId.slice(-6),
+    },
+    authorization: {
+      brief_id: manifest.publication_brief.id,
+      brief_revision: manifest.publication_brief.revision,
+      authorized_for_publication:
+        manifest.publication_brief.authorized_for_publication,
+    },
+    current_operation: "none",
     title: manifest.article.title,
     media_count: manifest.media.length,
-    publication_eligibility: manifest.publication_eligibility,
+    eligible_for_draft: manifest.eligible_for_draft,
+    eligible_for_publication: manifest.eligible_for_publication,
     state: "prepared",
     remote_ids: {},
     media_uploads: {},
@@ -447,7 +485,7 @@ export async function publishWechatDraft(
   confirm: ConfirmPublish,
 ): Promise<StoredAttempt> {
   const attempt = await loadAttempt(options.cwd, attemptId);
-  if (!attempt.publication_eligibility) {
+  if (!attempt.eligible_for_publication) {
     throw new KTeachError(
       "validation-failed",
       "The Publication Brief did not authorize public publishing.",
@@ -495,7 +533,7 @@ export async function publishWechatDraft(
   });
 }
 
-function stateForStatus(status: number): PublicationState {
+export function stateForWechatPublishStatus(status: number): PublicationState {
   if (status === 0) return "published";
   if (status === 1) return "polling";
   if (status === 4) return "review_rejected";
@@ -522,7 +560,7 @@ export async function queryWechatStatus(
       publish_id: attempt.remote_ids.publish_id,
     });
     const status = Number(result.publish_status);
-    attempt.state = stateForStatus(status);
+    attempt.state = stateForWechatPublishStatus(status);
     attempt.last_checked_at = new Date().toISOString();
     if (typeof result.article_id === "string") {
       attempt.remote_ids.article_id = result.article_id;

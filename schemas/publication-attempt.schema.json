@@ -4,16 +4,39 @@
   "title": "Publication Attempt",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "id", "artifact_id", "artifact_dir", "account_alias", "title", "media_count", "publication_eligibility", "state", "remote_ids", "media_uploads"],
+  "required": ["schema_version", "id", "artifact_id", "artifact_revision", "artifact_dir", "account_alias", "account", "authorization", "current_operation", "title", "media_count", "eligible_for_draft", "eligible_for_publication", "state", "remote_ids", "media_uploads"],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "id": { "type": "string", "minLength": 1 },
     "artifact_id": { "type": "string", "minLength": 1 },
+    "artifact_revision": { "type": "string", "minLength": 1 },
     "artifact_dir": { "type": "string", "minLength": 1 },
     "account_alias": { "type": "string", "minLength": 1 },
+    "account": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alias", "name", "app_id_suffix"],
+      "properties": {
+        "alias": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "app_id_suffix": { "type": "string", "minLength": 1 }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["brief_id", "brief_revision", "authorized_for_publication"],
+      "properties": {
+        "brief_id": { "type": "string", "minLength": 1 },
+        "brief_revision": { "type": "string", "minLength": 1 },
+        "authorized_for_publication": { "type": "boolean" }
+      }
+    },
+    "current_operation": { "enum": ["none", "upload-media", "create-draft", "send-preview", "submit-publish", "poll-status"] },
     "title": { "type": "string", "minLength": 1 },
     "media_count": { "type": "number" },
-    "publication_eligibility": { "type": "boolean" },
+    "eligible_for_draft": { "type": "boolean" },
+    "eligible_for_publication": { "type": "boolean" },
     "state": { "enum": ["prepared", "uploading_media", "draft_created", "previewed", "publish_submitted", "polling", "published", "failed", "review_rejected", "deleted", "blocked", "unknown"] },
     "remote_ids": { "type": "object", "additionalProperties": { "type": "string" } },
     "media_uploads": { "type": "object", "additionalProperties": { "type": "string" } },

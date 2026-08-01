@@ -1,0 +1,16 @@
+schema_version: 1
+id: <presentation-brief-id>
+revision: 2026-01-01T00:00:00Z
+purpose: teaching
+audience: <受众>
+learner_stage: <可靠的学习者阶段，可选>
+duration_minutes: 30
+lesson_id: <lesson-id>
+lesson_revision: <lesson-revision>
+include:
+  - <要纳入的二级标题>
+exclude: []
+theme:
+  id: classic-manual
+  source: recommended
+  reason: <推荐或选择依据>

@@ -13,6 +13,7 @@ import {
   publishWechatDraft,
   queryWechatStatus,
   resolveWechatCredentials,
+  stateForWechatPublishStatus,
 } from "../src/wechat-publisher.ts";
 import { KTeachError } from "../src/errors.ts";
 import { validateDocument } from "../src/schema.ts";
@@ -37,8 +38,14 @@ async function fixture() {
   await writeFile(
     path.join(artifactDir, "manifest.json"),
     JSON.stringify({
-      schema_version: 1,
+      schema_version: 2,
       id: "wechat-public-lesson",
+      artifact_revision: "artifact-r1",
+      publication_brief: {
+        id: "public-lesson",
+        revision: "brief-r1",
+        authorized_for_publication: true,
+      },
       article: { title: "公开课", author: "K Teach", digest: "摘要" },
       files: ["article.html", "cover/cover.jpg", "media/diagram.png"],
       media: [
@@ -51,7 +58,8 @@ async function fixture() {
         },
       ],
       validation: { eligible_for_draft: true },
-      publication_eligibility: true,
+      eligible_for_draft: true,
+      eligible_for_publication: true,
     }),
   );
   return { workspace, artifactDir };
@@ -114,6 +122,9 @@ test("official publisher uploads media, drafts, previews, confirms publish, and 
   try {
     const drafted = await createWechatDraft(artifactDir, options);
     assert.equal(drafted.state, "draft_created");
+    assert.equal(drafted.schema_version, 2);
+    assert.equal(drafted.account.app_id_suffix, "app-id");
+    assert.equal(drafted.authorization.brief_revision, "brief-r1");
     assert.equal(drafted.remote_ids.draft_media_id, "draft-media-id");
     assert.equal(drafted.remote_ids.cover_media_id, "cover-media-id");
     assert.equal(drafted.media_uploads.KT_WECHAT_MEDIA_001, "https://mmbiz.qpic.cn/body.png");
@@ -289,5 +300,54 @@ test("doctor is read-only, reports capability uncertainty, and maps rate limits"
       media_count: 2,
     }),
     false,
+  );
+});
+
+test("one frozen artifact creates isolated attempts and remote IDs for accounts A and B", async () => {
+  const { workspace, artifactDir } = await fixture();
+  const mockFor = async (suffix) => withMockWechat((url) => {
+    if (url === "/cgi-bin/stable_token") return { access_token: `token-${suffix}`, expires_in: 7200 };
+    if (url.startsWith("/cgi-bin/media/uploadimg")) return { url: `https://mmbiz.qpic.cn/${suffix}.png` };
+    if (url.startsWith("/cgi-bin/material/add_material")) return { media_id: `cover-${suffix}` };
+    if (url.startsWith("/cgi-bin/draft/add")) return { media_id: `draft-${suffix}` };
+    return { errcode: 404, errmsg: "unexpected" };
+  });
+  const mockA = await mockFor("a");
+  const mockB = await mockFor("b");
+  try {
+    const attemptA = await createWechatDraft(artifactDir, {
+      cwd: workspace,
+      accountAlias: "a",
+      accountName: "帐号 A",
+      credentials: { appId: "wx-account-a", appSecret: "secret-a" },
+      apiBaseUrl: mockA.baseUrl,
+      cacheDir: path.join(workspace, "cache-a"),
+    });
+    const attemptB = await createWechatDraft(artifactDir, {
+      cwd: workspace,
+      accountAlias: "b",
+      accountName: "帐号 B",
+      credentials: { appId: "wx-account-b", appSecret: "secret-b" },
+      apiBaseUrl: mockB.baseUrl,
+      cacheDir: path.join(workspace, "cache-b"),
+    });
+    assert.notEqual(attemptA.id, attemptB.id);
+    assert.equal(attemptA.artifact_id, attemptB.artifact_id);
+    assert.equal(attemptA.artifact_revision, attemptB.artifact_revision);
+    assert.deepEqual(attemptA.remote_ids, { cover_media_id: "cover-a", draft_media_id: "draft-a" });
+    assert.deepEqual(attemptB.remote_ids, { cover_media_id: "cover-b", draft_media_id: "draft-b" });
+    assert.equal(attemptA.account.name, "帐号 A");
+    assert.equal(attemptB.account.name, "帐号 B");
+    assert.doesNotMatch(JSON.stringify([attemptA, attemptB]), /secret-a|secret-b|token-a|token-b/);
+  } finally {
+    await mockA.close();
+    await mockB.close();
+  }
+});
+
+test("publish polling maps every documented terminal and retry state", () => {
+  assert.deepEqual(
+    [0, 1, 2, 3, 4, 5, 6, 99].map(stateForWechatPublishStatus),
+    ["published", "polling", "failed", "failed", "review_rejected", "deleted", "blocked", "failed"],
   );
 });

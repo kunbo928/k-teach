@@ -4,13 +4,13 @@
   "title": "WeChat Artifact Manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "id", "kind", "channel", "generator", "generated_at", "lesson", "design_profile", "publication_brief", "article", "input_hash", "input_sources", "files", "media", "capabilities_used", "warnings", "validation", "publication_eligibility"],
+  "required": ["schema_version", "id", "kind", "channel", "generator", "generated_at", "lesson", "design_profile", "publication_brief", "channel_theme", "article_type", "artifact_revision", "article", "input_hash", "input_sources", "files", "media", "capabilities_used", "warnings", "validation", "eligible_for_draft", "eligible_for_publication"],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "id": { "type": "string", "minLength": 1 },
     "kind": { "const": "wechat-article" },
     "channel": { "const": "wechat" },
-    "generator": { "const": "k-teach-wechat-v1" },
+    "generator": { "const": "k-teach-wechat-v2" },
     "generated_at": { "type": "string", "minLength": 1 },
     "lesson": {
       "type": "object",
@@ -50,6 +50,9 @@
         "authorized_for_publication": { "type": "boolean" }
       }
     },
+    "channel_theme": { "enum": ["emerald-editorial", "graphite-minimal", "olive-journal"] },
+    "article_type": { "enum": ["tutorial", "analysis", "narrative"] },
+    "artifact_revision": { "type": "string", "minLength": 1 },
     "article": {
       "type": "object",
       "additionalProperties": false,
@@ -104,6 +107,7 @@
         "eligible_for_draft": { "type": "boolean" }
       }
     },
-    "publication_eligibility": { "type": "boolean" }
+    "eligible_for_draft": { "type": "boolean" },
+    "eligible_for_publication": { "type": "boolean" }
   }
 }

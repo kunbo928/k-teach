@@ -34,16 +34,21 @@ Treat the article as a public derivative, not as the lesson itself.
 
 1. Require a Publication Brief that selects the public sections, audience,
    angle, exclusions, title, author, summary, cover, and authorization state.
-2. Run `k-teach wechat render --brief <brief-id>`. The native renderer derives
+2. For an ordinary article request, run `k-teach wechat render --brief
+   <brief-id>` with the default `emerald-editorial` Channel Theme, validate the
+   artifact, select one account, show the summary, and ask before creating the
+   remote draft. If the user explicitly requests theme preview, run
+   `k-teach wechat render-proposals --brief <brief-id>` first. If the user says
+   local-only, stop after rendering.
    only selected Lesson Bundle content, preserves facts and citations, and
    omits exercises, answers, progress, private notes, and implicit local links.
 3. Deliver `article.html`, copy-enabled `preview.html`, the cover, prepared
    media, and the validation manifest. Require inline styles, `<span leaf="">`
    text wrappers, reusable editorial components, controlled color, strong
    section rhythm, and platform-safe markup.
-4. Keep the result local unless the user separately requests a WeChat draft or
-   publish operation. K Teach's Publication Brief and authorization rules
-   remain authoritative.
+4. Never infer public publication from article generation or draft creation.
+   Direct public publication may skip theme preview and a separate draft
+   confirmation, but not validation, exact final confirmation, or polling.
 
 Do not invoke or require another Skill for writing or layout. Do not substitute
 the learning-page renderer for the native WeChat renderer.
@@ -53,16 +58,16 @@ the learning-page renderer for the native WeChat renderer.
 Treat PPT as a presentation derivative of the Lesson Bundle. The expected
 artifact is a static HTML slide deck, not a binary `.pptx`.
 
-1. Confirm only presentation details not already implied by the request:
-   audience and approximate speaking time. Keep content in the Lesson Bundle.
-2. Run `k-teach render ppt --lesson <lesson-id>`. The native renderer creates
-   a cover, one slide per level-two lesson section, practice slides, and a
-   sources slide. Pass `--theme <theme-id>` when the user selects one of the
-   seven Teaching Themes; otherwise use the Teach default.
+1. If the user only says PPT, clarify `teaching` (课堂教学) versus `talk`
+   (讲座分享), then confirm audience, duration, and selected chapters only when
+   missing.
+2. Create a Presentation Brief and run `k-teach render ppt --brief <id>`.
+   Teaching uses a multi-slide learning sequence and may include practice;
+   talk uses a narrative spine and omits learning exercises by default.
 3. Preserve facts, sources, and teaching objectives. Keep answer keys and
    facilitation guidance in presenter notes rather than revealing them on
    learner-facing slides.
-4. Deliver `index.html` and its manifest. Verify 16:9 layout, keyboard
+4. Deliver one self-contained `index.html` and its audit manifest. Verify 16:9 layout, keyboard
    navigation, overview, presenter mode, reduced-motion behavior, print export,
    media paths, overflow, clipping, contrast, and consistency.
 
