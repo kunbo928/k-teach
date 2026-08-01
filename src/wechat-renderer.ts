@@ -16,6 +16,10 @@ import { renderDiagramSvg } from "./diagram-renderer.ts";
 import { KTeachError } from "./errors.ts";
 import { validateLessonBundles } from "./lesson-bundle.ts";
 import { validateDocument } from "./schema.ts";
+import {
+  resolveTeachingTheme,
+  type TeachingTheme,
+} from "./teaching-themes.ts";
 
 const COLORS = {
   paper: "#F5F1E8",
@@ -25,6 +29,40 @@ const COLORS = {
   accent: "#315C49",
   note: "#E7E8DE",
 };
+
+export function applyWechatTheme(
+  article: string,
+  theme: TeachingTheme,
+): string {
+  const replacements: Array<[string, string]> = [
+    [COLORS.paper, theme.colors.background],
+    [COLORS.ink, theme.colors.ink],
+    [COLORS.muted, theme.colors.muted],
+    [COLORS.line, theme.colors.line],
+    [COLORS.accent, theme.colors.accent],
+    [COLORS.note, theme.colors.accentSoft],
+    ["#202B26", theme.colors.code],
+    ["#E8ECE9", theme.id === "future-lab" ? "#EAF5F4" : theme.colors.ink],
+  ];
+  let themed = article;
+  for (const [source, target] of replacements)
+    themed = themed.replaceAll(source, target);
+  const border =
+    theme.pattern === "columns"
+      ? `border-top:4px double ${theme.colors.ink}`
+      : theme.pattern === "circuit"
+        ? `border:1px solid ${theme.colors.line}`
+        : `border-top:4px solid ${theme.colors.accent}`;
+  return themed
+    .replace(
+      `border-top:4px solid ${theme.colors.accent}`,
+      border,
+    )
+    .replace(
+      "box-sizing:border-box;max-width:100%;",
+      `box-sizing:border-box;max-width:100%;border-radius:${theme.radius};`,
+    );
+}
 
 interface InlineContext {
   citations: Map<string, number>;
@@ -491,25 +529,26 @@ function wrapPreview(title: string, article: string): string {
 async function createCover(
   outputPath: string,
   brief: PublicationBrief,
+  theme: TeachingTheme,
 ): Promise<Buffer> {
   const title = Array.from(brief.title);
   const first = title.slice(0, 16).join("");
   const second = title.slice(16, 32).join("");
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="383">
-  <rect width="900" height="383" fill="${COLORS.paper}"/>
-  <rect x="56" y="48" width="6" height="287" fill="${COLORS.accent}"/>
-  <text x="92" y="112" fill="${COLORS.muted}" font-family="-apple-system,'PingFang SC',sans-serif" font-size="24">K TEACH · FIELD MANUAL</text>
-  <text x="92" y="196" fill="${COLORS.ink}" font-family="'Songti SC','STSong',serif" font-size="48" font-weight="700">${visibleText(
+  <rect width="900" height="383" fill="${theme.colors.background}"/>
+  <rect x="56" y="48" width="6" height="287" fill="${theme.colors.accent}"/>
+  <text x="92" y="112" fill="${theme.colors.muted}" font-family="-apple-system,'PingFang SC',sans-serif" font-size="24">K TEACH · ${visibleText(theme.label)}</text>
+  <text x="92" y="196" fill="${theme.colors.ink}" font-family="'Songti SC','STSong',serif" font-size="48" font-weight="700">${visibleText(
     first,
   )}</text>
   ${
     second
-      ? `<text x="92" y="260" fill="${COLORS.ink}" font-family="'Songti SC','STSong',serif" font-size="48" font-weight="700">${visibleText(
+      ? `<text x="92" y="260" fill="${theme.colors.ink}" font-family="'Songti SC','STSong',serif" font-size="48" font-weight="700">${visibleText(
           second,
         )}</text>`
       : ""
   }
-  <text x="92" y="314" fill="${COLORS.muted}" font-family="-apple-system,'PingFang SC',sans-serif" font-size="22">${visibleText(
+  <text x="92" y="314" fill="${theme.colors.muted}" font-family="-apple-system,'PingFang SC',sans-serif" font-size="22">${visibleText(
     brief.author,
   )}</text>
 </svg>`;
@@ -525,11 +564,12 @@ async function prepareCover(
   outputPath: string,
   lesson: LessonBundle,
   brief: PublicationBrief,
+  theme: TeachingTheme,
 ): Promise<{ bytes: Buffer; source: string; usedVisualProvider: boolean }> {
   if (brief.cover.mode === "generated") {
     return {
-      bytes: await createCover(outputPath, brief),
-      source: "deterministic-field-manual-cover",
+      bytes: await createCover(outputPath, brief, theme),
+      source: `deterministic-${theme.id}-cover`,
       usedVisualProvider: false,
     };
   }
@@ -689,7 +729,11 @@ export async function renderWechat(
   const markdown = await readFile(path.join(lessonDirectory, "lesson.md"), "utf8");
   const selected = selectBlocks(markdown, brief);
   const preparedMedia = await prepareMedia(root, lessonDirectory, selected);
-  const article = renderArticle(lesson, brief, selected, preparedMedia);
+  const theme = resolveTeachingTheme(brief.theme);
+  const article = applyWechatTheme(
+    renderArticle(lesson, brief, selected, preparedMedia),
+    theme,
+  );
   const validation = validateArticle(article, brief);
   if (!validation.eligible_for_draft) {
     throw new KTeachError(
@@ -713,6 +757,7 @@ export async function renderWechat(
     path.join(coverDirectory, "cover.jpg"),
     lesson,
     brief,
+    theme,
   );
   const inputHash = createHash("sha256")
     .update(lessonSource)
@@ -727,7 +772,7 @@ export async function renderWechat(
     generator: "k-teach-wechat-v1",
     generated_at: brief.revision,
     lesson: { id: lesson.id, revision: lesson.revision },
-    design_profile: { id: "field-manual", revision: "1" },
+    design_profile: { id: theme.id, revision: "1" },
     publication_brief: {
       id: brief.id,
       revision: brief.revision,

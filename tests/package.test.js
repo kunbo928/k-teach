@@ -28,6 +28,21 @@ test("package metadata identifies the public MIT release and vendored notices", 
   }
 });
 
+test("the packaged Skill routes learning, WeChat, and PPT intents explicitly", async () => {
+  const skill = await readFile(path.join(packageRoot, "SKILL.md"), "utf8");
+  const routing = await readFile(
+    path.join(packageRoot, "references", "output-intents.md"),
+    "utf8",
+  );
+
+  assert.match(skill, /`学习`、`公众号`、`PPT`/);
+  assert.match(skill, /k-teach wechat render/);
+  assert.match(skill, /k-teach render ppt/);
+  assert.match(routing, /学习、公众号，还是 PPT/);
+  assert.match(routing, /Do not call an HTML deck a `\.pptx`/);
+  assert.match(routing, /must not\s+depend on another Agent Skill/);
+});
+
 test("npm build emits a JavaScript CLI that runs without the TypeScript source tree", async () => {
   assert.equal((await stat(path.join(packageRoot, "dist", "cli.js"))).isFile(), true);
   assert.doesNotMatch(
@@ -46,9 +61,18 @@ test("npm build emits a JavaScript CLI that runs without the TypeScript source t
     { cwd: workspace, encoding: "utf8" },
   );
   assert.deepEqual(JSON.parse(result.stdout), {
-    core: ["lesson-bundle", "web", "diagram"],
+    core: ["lesson-bundle", "web", "diagram", "ppt"],
     optional: ["visual-provider", "wechat"],
     visual_modes: ["auto", "required", "off"],
+    teaching_themes: [
+      "classic-manual",
+      "storybook",
+      "nature-explorer",
+      "active-classroom",
+      "junior-lab",
+      "editorial-desk",
+      "future-lab",
+    ],
   });
   const version = await execFileAsync(
     process.execPath,

@@ -23,7 +23,7 @@ K Teach 指导 Agent 完成完整的教学循环：
 4. 使用可信的一手资料核实课程中的事实。
 5. 创建包含讲解、练习、反馈和检索活动的 Lesson Bundle。
 6. 根据教学目的选择文本、确定性图解或可选的生成式视觉。
-7. 渲染精致的本地 Web Lesson。
+7. 先确认内容用途，再生成学习页、公众号排版或 HTML PPT。
 8. 记录已经表现出来的学习证据，并据此决定下一步教什么。
 
 最终得到的不是一连串互不关联的回答，而是一个能跨会话保存学习使命、课程内容、学习证据和教学决策的持续学习工作空间。
@@ -40,6 +40,7 @@ K Teach 指导 Agent 完成完整的教学循环：
 - 跟踪已经表现出来的理解与误区；
 - 在确实有助于理解时创建图解或视觉学习资产；
 - 把选定的课程内容派生为微信公众号文章。
+- 把课程内容派生为适合演讲的 HTML PPT。
 
 示例请求：
 
@@ -51,6 +52,8 @@ K Teach 指导 Agent 完成完整的教学循环：
 把这个概念设计成一节 15 分钟的课，包含练习和检索测试。
 
 创建一个图解，解释这节课中的状态转换。
+
+把这节课做成一份用于技术分享的 PPT。
 ```
 
 ## 教学模型
@@ -85,9 +88,19 @@ K Teach 可以生成：
 - **Diagram**：确定性生成、可访问的 SVG 教学图解；
 - **生成式视觉**：通过明确视觉计划登记的可选插图；
 - **微信公众号文章**：仅从明确的 Publication Brief 派生的公开内容；
+- **HTML PPT**：从 Lesson Bundle 派生、带键盘导航和演讲者备注的演示文稿；
 - **学习记录**：能够改变后续教学决策的简洁学习证据。
 
 生成式视觉永远不是完成核心课程的必要条件。本地课程默认保持私有；公开发布是独立且必须明确授权的操作。
+
+当请求没有说明用途时，K Teach 会先询问用于“学习、公众号还是 PPT”。三条路径
+全部由 K Teach 自身完成：学习沿用 Field Manual Web Lesson；公众号生成内联
+样式正文、复制预览、封面、媒体和校验清单；PPT 生成带主题、键盘导航、总览、
+演讲者模式、备注和打印导出的 16:9 静态 HTML 演示文稿。无需安装其他 Skill。
+
+三条路径共享七套已实现的授课主题：经典手册、故事绘本、自然探索、活力课堂、
+少年实验室、编辑部和未来研究所。学习页可即时选择并按 Teach 保存偏好；公众号
+通过 Publication Brief 选择；PPT 使用 `--theme` 选择并可按 `T` 循环预览。
 
 ## 安装
 
@@ -135,6 +148,7 @@ K Teach 包含一个小型确定性 CLI，供 Skill 执行需要可复现、可�
 - 预览本地课程；
 - 登记外部生成的视觉资产；
 - 渲染选定的微信公众号文章；
+- 从 Lesson Bundle 渲染 HTML PPT；
 - 执行经过明确授权的微信发布操作。
 
 CLI 服务于 Skill，但不负责决定教什么。
@@ -146,6 +160,7 @@ k-teach init --tools codex,claude
 k-teach update
 k-teach validate
 k-teach render web
+k-teach render ppt --lesson <lesson-id> --theme <theme-id>
 k-teach preview
 ```
 
@@ -192,6 +207,8 @@ pnpm test
 ## 文档
 
 - [`references/teaching-workflow.md`](references/teaching-workflow.md)
+- [`references/output-intents.md`](references/output-intents.md)
+- [`references/teaching-themes.md`](references/teaching-themes.md)
 - [`references/core-contracts.md`](references/core-contracts.md)
 - [`references/diagrams.md`](references/diagrams.md)
 - [`references/visual-providers.md`](references/visual-providers.md)

@@ -16,7 +16,18 @@
     "angle": { "type": "string", "minLength": 1 },
     "include": { "type": "array", "items": { "type": "string" } },
     "exclude": { "type": "array", "items": { "type": "string" } },
-    "theme": { "const": "field-manual" },
+    "theme": {
+      "enum": [
+        "field-manual",
+        "classic-manual",
+        "storybook",
+        "nature-explorer",
+        "active-classroom",
+        "junior-lab",
+        "editorial-desk",
+        "future-lab"
+      ]
+    },
     "author": { "type": "string", "minLength": 1 },
     "summary": { "type": "string", "minLength": 1 },
     "cover": {

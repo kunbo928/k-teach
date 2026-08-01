@@ -52,6 +52,11 @@ scale, and file list.
 The Visual Provider is optional and follows `auto`, `required`, or `off`.
 WeChat rendering requires a Publication Brief and excludes exercises, answers,
 progress state, and implicit links to local lessons.
+PPT rendering derives a static 16:9 HTML deck directly from a validated Lesson
+Bundle. It selects presentation tokens from the composition mode, keeps
+exercise answers in presenter notes, includes keyboard navigation, overview,
+presenter mode, print export, and emits an Artifact Manifest with channel
+`ppt`.
 
 The WeChat renderer selects exact lesson sections from the brief, derives a
 restricted inline-style HTML fragment, local preview shell, upload-ready media,
@@ -68,6 +73,12 @@ The Field Manual Web profile supports `reading`, `workshop`, and `atlas`.
 It defaults to paper tokens, provides a page-wide night theme, and always uses a
 fixed light print theme. Core content, exercises, answer disclosures, sources,
 and static fallbacks remain readable without JavaScript.
+
+The shared Teaching Theme catalog contains `classic-manual`, `storybook`,
+`nature-explorer`, `active-classroom`, `junior-lab`, `editorial-desk`, and
+`future-lab`. Web, WeChat, and PPT renderers consume the same IDs and visual
+tokens. Theme selection changes presentation only and never mutates Lesson
+Bundle content or learning evidence.
 
 ## Publication
 

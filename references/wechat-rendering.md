@@ -3,6 +3,10 @@
 Create a Publication Brief only when the user explicitly selects lesson
 content for public distribution. Save it as `publications/<brief-id>.yaml`.
 Start from [the bundled template](../assets/publication-brief/wechat.yaml).
+Set `theme` to one of the seven IDs in
+[teaching-themes.md](teaching-themes.md). The native renderer applies that
+theme’s palette, typography, geometry, editorial rhythm, cover treatment, and
+platform-safe inline components.
 
 The brief must match the current Lesson Bundle revision. `include` and
 `exclude` use exact level-two headings from `lesson.md`; exclusions win.

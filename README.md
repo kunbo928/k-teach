@@ -32,7 +32,8 @@ K Teach guides the agent through the full teaching loop:
    retrieval.
 6. Choose the right teaching medium: text, deterministic diagrams, or optional
    generated visuals.
-7. Render a polished local Web Lesson.
+7. Resolve the intended use, then produce a learning page, WeChat layout, or
+   HTML presentation.
 8. Record demonstrated learning and use it to choose what comes next.
 
 The result is not a stream of disconnected answers. It is a learning workspace
@@ -51,6 +52,7 @@ Use this Skill when you want an AI agent to:
 - track demonstrated understanding and misconceptions;
 - create diagrams or visual learning assets when they improve comprehension;
 - derive a selected lesson into a WeChat article.
+- derive teaching content into an HTML slide deck.
 
 Example requests:
 
@@ -62,6 +64,8 @@ Continue my TypeScript learning workspace and design the next lesson.
 Turn this concept into a 15-minute lesson with an exercise and retrieval check.
 
 Create a diagram that explains the state transitions in this lesson.
+
+Turn this lesson into a PPT-style deck for a technical talk.
 ```
 
 ## Teaching model
@@ -106,11 +110,26 @@ K Teach can produce:
   explicit visual plan;
 - **WeChat articles** — selected public derivatives created only from an
   explicit Publication Brief;
+- **HTML presentations** — slide decks with keyboard navigation and presenter
+  notes derived from the Lesson Bundle;
 - **Learning records** — concise evidence that changes future teaching.
 
 Generated visuals are never required for the core lesson. A local lesson is
 private by default. Public publishing is a separate, explicitly authorized
 operation.
+
+When the intended use is unclear, K Teach first asks whether the content is for
+learning, a WeChat official account, or a PPT. K Teach handles all three routes
+itself: the existing Field Manual Web Lesson, platform-safe WeChat article
+HTML with a copy preview and validation manifest, or a themed 16:9 static HTML
+presentation with navigation, overview, presenter notes, and print export. No
+other Skill is required.
+
+All three routes share seven implemented Teaching Themes: Classic Manual,
+Storybook, Nature Explorer, Active Classroom, Junior Lab, Editorial Desk, and
+Future Lab. Web output offers a per-Teach persisted selector, WeChat selects a
+theme in its Publication Brief, and PPT uses `--theme` plus in-deck `T`
+cycling.
 
 ## Installation
 
@@ -161,6 +180,7 @@ that should be reproducible and testable:
 - preview the local course;
 - register externally generated visual assets;
 - render selected WeChat articles;
+- render HTML presentations from Lesson Bundles;
 - perform explicitly authorized WeChat publication operations.
 
 The CLI supports the Skill; it does not decide what to teach.
@@ -172,6 +192,7 @@ k-teach init --tools codex,claude
 k-teach update
 k-teach validate
 k-teach render web
+k-teach render ppt --lesson <lesson-id> --theme <theme-id>
 k-teach preview
 ```
 
@@ -222,6 +243,8 @@ Do not edit `dist/` directly.
 ## Documentation
 
 - [`references/teaching-workflow.md`](references/teaching-workflow.md)
+- [`references/output-intents.md`](references/output-intents.md)
+- [`references/teaching-themes.md`](references/teaching-themes.md)
 - [`references/core-contracts.md`](references/core-contracts.md)
 - [`references/diagrams.md`](references/diagrams.md)
 - [`references/visual-providers.md`](references/visual-providers.md)

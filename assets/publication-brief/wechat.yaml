@@ -10,7 +10,7 @@ include:
   - <要公开的二级标题>
 exclude:
   - <明确排除的二级标题>
-theme: field-manual
+theme: classic-manual
 author: <署名，最多 16 个字>
 summary: <摘要，最多 120 个字>
 cover:

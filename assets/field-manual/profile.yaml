@@ -6,6 +6,15 @@ themes:
   - paper
   - night
   - print
+default_teaching_theme: classic-manual
+teaching_themes:
+  - classic-manual
+  - storybook
+  - nature-explorer
+  - active-classroom
+  - junior-lab
+  - editorial-desk
+  - future-lab
 modes:
   - reading
   - workshop

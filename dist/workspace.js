@@ -96,7 +96,7 @@ export async function initializeTeach(
   try {
     await writeFile(
       path.join(teachRoot, "teach.yaml"),
-      `schema_version: 1\nid: ${teachId}\ntitle: ${teachId}\n`,
+      `schema_version: 1\nid: ${teachId}\ntitle: ${teachId}\ntheme_default: classic-manual\n`,
       { encoding: "utf8", flag: "wx" },
     );
   } catch (error) {

@@ -1,0 +1,306 @@
+:root {
+  --theme-radius: 2px;
+  --theme-border: 1px;
+  --theme-shadow: none;
+  --theme-heading-transform: none;
+  --theme-pattern:
+    linear-gradient(
+      90deg,
+      transparent 0 4.5rem,
+      color-mix(in srgb, var(--line) 40%, transparent) 4.5rem 4.56rem,
+      transparent 4.56rem
+    );
+}
+
+:root[data-teaching-theme="classic-manual"] {
+  --paper: #f2f0e8;
+  --surface: #fbfaf5;
+  --ink: #17231d;
+  --muted: #5f6a63;
+  --line: #b8beb7;
+  --accent: #315f49;
+  --accent-ink: #f6f8f4;
+  --code: #e5e8df;
+  --display: "Songti SC", STSong, Georgia, serif;
+}
+
+:root[data-teaching-theme="storybook"] {
+  --paper: #fff5e7;
+  --surface: #fffcf6;
+  --ink: #49352d;
+  --muted: #7d655b;
+  --line: #e7cdbb;
+  --accent: #d95f59;
+  --accent-ink: #fffaf2;
+  --code: #f7e8d7;
+  --display: "Kaiti SC", STKaiti, "Songti SC", serif;
+  --theme-radius: 24px;
+  --theme-border: 2px;
+  --theme-shadow: 0 12px 30px color-mix(in srgb, var(--accent) 12%, transparent);
+  --theme-pattern:
+    radial-gradient(circle at 12% 8%, #ffe0c8 0 2.8rem, transparent 2.9rem),
+    radial-gradient(circle at 88% 24%, #f7d9d6 0 2rem, transparent 2.1rem);
+}
+
+:root[data-teaching-theme="nature-explorer"] {
+  --paper: #f1f4e8;
+  --surface: #fbfcf5;
+  --ink: #24382c;
+  --muted: #617061;
+  --line: #b8c8ae;
+  --accent: #4c7a4a;
+  --accent-ink: #f7fbf3;
+  --code: #e5ecd8;
+  --display: "Kaiti SC", STKaiti, Georgia, serif;
+  --theme-radius: 14px;
+  --theme-shadow: 0 10px 24px #315f4912;
+  --theme-pattern:
+    radial-gradient(ellipse at 8% 20%, #dce9c8 0 1.5rem, transparent 1.6rem),
+    radial-gradient(ellipse at 92% 72%, #cadcb8 0 2rem, transparent 2.1rem);
+}
+
+:root[data-teaching-theme="active-classroom"] {
+  --paper: #fff8db;
+  --surface: #ffffff;
+  --ink: #19263b;
+  --muted: #5b6779;
+  --line: #b9c7dd;
+  --accent: #2962d9;
+  --accent-ink: #ffffff;
+  --code: #eef2fa;
+  --display: "Arial Rounded MT Bold", "PingFang SC", sans-serif;
+  --theme-radius: 16px;
+  --theme-border: 2px;
+  --theme-shadow: 0 9px 0 #19263b12;
+  --theme-heading-transform: rotate(-0.35deg);
+  --theme-pattern:
+    linear-gradient(135deg, transparent 94%, #ffbf3f 94%),
+    radial-gradient(circle at 92% 14%, #ff705d 0 0.55rem, transparent 0.6rem),
+    radial-gradient(circle at 8% 74%, #3fc4a1 0 0.45rem, transparent 0.5rem);
+}
+
+:root[data-teaching-theme="junior-lab"] {
+  --paper: #edf5f7;
+  --surface: #fdfeff;
+  --ink: #102e3b;
+  --muted: #54707b;
+  --line: #9dbbc4;
+  --accent: #007e8a;
+  --accent-ink: #f5ffff;
+  --code: #ddecef;
+  --display: "Avenir Next", "PingFang SC", sans-serif;
+  --theme-radius: 8px;
+  --theme-shadow: 0 12px 28px #102e3b14;
+  --theme-pattern:
+    linear-gradient(#9dbbc426 1px, transparent 1px),
+    linear-gradient(90deg, #9dbbc426 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+:root[data-teaching-theme="editorial-desk"] {
+  --paper: #f4f1ea;
+  --surface: #fcfbf7;
+  --ink: #181818;
+  --muted: #606060;
+  --line: #aaa59b;
+  --accent: #a52a2a;
+  --accent-ink: #ffffff;
+  --code: #e9e6df;
+  --display: "Songti SC", STSong, "Times New Roman", serif;
+  --theme-radius: 0;
+  --theme-border: 1px;
+  --theme-heading-transform: none;
+  --theme-pattern:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 calc(25% - 1px),
+      #aaa59b20 calc(25% - 1px) 25%
+    );
+}
+
+:root[data-teaching-theme="future-lab"] {
+  color-scheme: dark;
+  --paper: #0d1724;
+  --surface: #142335;
+  --ink: #eaf5f4;
+  --muted: #9ab2ba;
+  --line: #345363;
+  --accent: #35d0ba;
+  --accent-ink: #071815;
+  --success: #52d89e;
+  --warning: #e2b55f;
+  --danger: #ff8077;
+  --code: #101e2c;
+  --display: "Avenir Next", "PingFang SC", sans-serif;
+  --theme-radius: 6px;
+  --theme-shadow: 0 0 0 1px #35d0ba24, 0 16px 36px #00000040;
+  --theme-pattern:
+    linear-gradient(#35d0ba12 1px, transparent 1px),
+    linear-gradient(90deg, #35d0ba12 1px, transparent 1px),
+    radial-gradient(circle at 84% 14%, #6f5cff24 0 7rem, transparent 7.1rem);
+  background-size: 40px 40px, 40px 40px, auto;
+}
+
+:root[data-theme="night"][data-teaching-theme] {
+  color-scheme: dark;
+  --paper: #101713;
+  --surface: #17201b;
+  --ink: #e9ede8;
+  --muted: #a9b3ac;
+  --line: #3b4840;
+  --accent-ink: #101713;
+  --code: #202c25;
+}
+
+:root[data-theme="night"][data-teaching-theme="storybook"] {
+  --paper: #241a1a;
+  --surface: #302321;
+  --accent: #ff9a8f;
+  --line: #684a45;
+}
+
+:root[data-theme="night"][data-teaching-theme="nature-explorer"] {
+  --paper: #131d15;
+  --surface: #1b281d;
+  --accent: #9bc28a;
+  --line: #415c43;
+}
+
+:root[data-theme="night"][data-teaching-theme="active-classroom"] {
+  --paper: #10182a;
+  --surface: #18243a;
+  --accent: #7eabff;
+  --line: #3c547c;
+}
+
+:root[data-theme="night"][data-teaching-theme="junior-lab"] {
+  --paper: #0b1c24;
+  --surface: #132a34;
+  --accent: #58d2df;
+  --line: #37606a;
+}
+
+:root[data-theme="night"][data-teaching-theme="editorial-desk"] {
+  --paper: #171514;
+  --surface: #211e1c;
+  --accent: #e0776f;
+  --line: #5b5550;
+}
+
+body {
+  background: var(--theme-pattern), var(--paper);
+}
+
+.lesson-hero h1,
+.course-index h1 {
+  transform: var(--theme-heading-transform);
+}
+
+.exercise,
+.lesson-entry,
+.lesson-figure {
+  border-width: var(--theme-border);
+  border-radius: var(--theme-radius);
+  box-shadow: var(--theme-shadow);
+}
+
+.exercise,
+.lesson-figure {
+  overflow: hidden;
+}
+
+:root[data-teaching-theme="storybook"] .lesson-hero,
+:root[data-teaching-theme="nature-explorer"] .lesson-hero {
+  border: var(--theme-border) solid var(--line);
+  border-radius: var(--theme-radius);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  padding-inline: clamp(1.4rem, 5vw, 4rem);
+}
+
+:root[data-teaching-theme="active-classroom"] .lesson-kicker,
+:root[data-teaching-theme="junior-lab"] .lesson-kicker,
+:root[data-teaching-theme="future-lab"] .lesson-kicker {
+  width: fit-content;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+:root[data-teaching-theme="editorial-desk"] .lesson-content > p:first-of-type {
+  font-family: var(--display);
+  font-size: var(--step-1);
+}
+
+:root[data-teaching-theme="editorial-desk"] h2 {
+  border-block: 3px double var(--ink);
+  padding-block: 0.35em;
+  text-transform: uppercase;
+}
+
+:root[data-teaching-theme="future-lab"] .exercise,
+:root[data-teaching-theme="future-lab"] .lesson-figure {
+  backdrop-filter: blur(8px);
+}
+
+.theme-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.theme-controls label {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.teaching-theme-select {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--theme-radius);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.45rem 2rem 0.45rem 0.7rem;
+  font: inherit;
+}
+
+@media (max-width: 767px) {
+  .theme-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-teaching-theme="storybook"] .lesson-hero,
+  :root[data-teaching-theme="active-classroom"] .exercise {
+    animation: theme-arrive 420ms ease-out both;
+  }
+
+  @keyframes theme-arrive {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+}
+
+@media print {
+  :root[data-teaching-theme] {
+    color-scheme: light;
+    --paper: #ffffff;
+    --surface: #ffffff;
+    --ink: #17231d;
+    --muted: #4d5650;
+    --line: #aeb5af;
+    --accent: #315f49;
+    --code: #eef0eb;
+    --theme-pattern: none;
+    --theme-shadow: none;
+  }
+}

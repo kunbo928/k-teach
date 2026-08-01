@@ -25,6 +25,11 @@ import {
 
 } from "./lesson-bundle.js";
 import { resolveVisualAssets } from "./visuals.js";
+import {
+  isTeachingThemeId,
+  TEACHING_THEMES,
+
+} from "./teaching-themes.js";
 
 marked.use(
   markedKatex({
@@ -195,15 +200,22 @@ function renderSources(metadata              )         {
     .join("")}</ol></section>`;
 }
 
-function documentShell(title        , body        , assetPrefix        )         {
+function documentShell(
+  title        ,
+  body        ,
+  assetPrefix        ,
+  teachId        ,
+  themeDefault                 ,
+)         {
   return `<!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-teach-id="${escapeHtml(teachId)}" data-teaching-theme="${themeDefault}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>${escapeHtml(title)}</title>
   <link rel="stylesheet" href="${assetPrefix}assets/field-manual.css">
+  <link rel="stylesheet" href="${assetPrefix}assets/teaching-themes.css">
   <link rel="stylesheet" href="${assetPrefix}assets/katex.min.css">
   <script src="${assetPrefix}assets/field-manual.js" defer></script>
 </head>
@@ -211,14 +223,28 @@ function documentShell(title        , body        , assetPrefix        )        
   <a class="skip-link" href="#main">跳到正文</a>
   <header class="course-header">
     <a class="course-name" href="${assetPrefix}index.html">K Teach 学习手册</a>
-    <button class="theme-toggle" type="button" data-theme-toggle>切换阅读主题</button>
+    <div class="theme-controls">
+      <label for="teaching-theme">授课主题</label>
+      <select id="teaching-theme" class="teaching-theme-select" data-teaching-theme-select>
+        ${TEACHING_THEMES.map(
+          (theme) =>
+            `<option value="${theme.id}"${theme.id === themeDefault ? " selected" : ""}>${escapeHtml(theme.label)}</option>`,
+        ).join("")}
+      </select>
+      <button class="theme-toggle" type="button" data-theme-reset>恢复默认</button>
+      <button class="theme-toggle" type="button" data-theme-toggle>切换阅读模式</button>
+    </div>
   </header>
   ${body}
 </body>
 </html>`;
 }
 
-function renderLesson(lesson                )         {
+function renderLesson(
+  lesson                ,
+  teachId        ,
+  themeDefault                 ,
+)         {
   const metadata = lesson.metadata;
   const mediaPrefix = `../media/${encodeURIComponent(metadata.id)}/`;
   const exercisesById = new Map(
@@ -264,7 +290,7 @@ function renderLesson(lesson                )         {
     <article class="lesson-content">${content}${renderSources(metadata)}</article>
   </div>
 </main>`;
-  return documentShell(metadata.title, body, "../");
+  return documentShell(metadata.title, body, "../", teachId, themeDefault);
 }
 
 function renderEmbeddedAsset(
@@ -292,7 +318,11 @@ function renderEmbeddedAsset(
 </figure>`;
 }
 
-function renderIndex(lessons                  )         {
+function renderIndex(
+  lessons                  ,
+  teachId        ,
+  themeDefault                 ,
+)         {
   const entries = lessons
     .map(
       ({ metadata }) => `<article class="lesson-entry">
@@ -314,11 +344,21 @@ function renderIndex(lessons                  )         {
     <div class="lesson-list">${entries || "<p>还没有 Lesson Bundle。</p>"}</div>
   </section>
 </main>`;
-  return documentShell("K Teach 学习手册", body, "");
+  return documentShell("K Teach 学习手册", body, "", teachId, themeDefault);
 }
 
 export async function renderWeb(root        , outputDir        )                  {
   const lessons = await loadLessons(root);
+  const teach = parse(
+    await readFile(path.join(root, "teach.yaml"), "utf8").catch(
+      () => `id: ${path.basename(root)}\n`,
+    ),
+  )                                             ;
+  const teachId =
+    typeof teach.id === "string" && teach.id ? teach.id : path.basename(root);
+  const themeDefault = isTeachingThemeId(teach.theme_default)
+    ? teach.theme_default
+    : "classic-manual";
   const output = path.resolve(root, outputDir, "web");
   const lessonsOutput = path.join(output, "lessons");
   const assetsOutput = path.join(output, "assets");
@@ -349,15 +389,23 @@ export async function renderWeb(root        , outputDir        )                
       path.join(assetRoot, "field-manual.js"),
       path.join(assetsOutput, "field-manual.js"),
     ),
+    copyFile(
+      path.join(assetRoot, "teaching-themes.css"),
+      path.join(assetsOutput, "teaching-themes.css"),
+    ),
     copyFile(katexCss, path.join(assetsOutput, "katex.min.css")),
     ...katexFontFiles.map((file) =>
       copyFile(path.join(katexFontsRoot, file), path.join(fontsOutput, file)),
     ),
-    writeFile(path.join(output, "index.html"), renderIndex(lessons), "utf8"),
+    writeFile(
+      path.join(output, "index.html"),
+      renderIndex(lessons, teachId, themeDefault),
+      "utf8",
+    ),
     ...lessons.map((lesson) =>
       writeFile(
         path.join(lessonsOutput, `${lesson.metadata.id}.html`),
-        renderLesson(lesson),
+        renderLesson(lesson, teachId, themeDefault),
         "utf8",
       ),
     ),

@@ -11,6 +11,31 @@
     "revision": { "type": "string", "minLength": 1 },
     "name": { "type": "string", "minLength": 1 },
     "modes": { "type": "array", "items": { "enum": ["reading", "workshop", "atlas"] } },
-    "themes": { "type": "array", "items": { "enum": ["paper", "night", "print"] } }
+    "themes": { "type": "array", "items": { "enum": ["paper", "night", "print"] } },
+    "default_teaching_theme": {
+      "enum": [
+        "classic-manual",
+        "storybook",
+        "nature-explorer",
+        "active-classroom",
+        "junior-lab",
+        "editorial-desk",
+        "future-lab"
+      ]
+    },
+    "teaching_themes": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "classic-manual",
+          "storybook",
+          "nature-explorer",
+          "active-classroom",
+          "junior-lab",
+          "editorial-desk",
+          "future-lab"
+        ]
+      }
+    }
   }
 }

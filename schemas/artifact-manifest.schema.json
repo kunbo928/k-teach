@@ -11,7 +11,7 @@
     "lesson_id": { "type": "string", "minLength": 1 },
     "lesson_revision": { "type": "string", "minLength": 1 },
     "design_profile_revision": { "type": "string", "minLength": 1 },
-    "channel": { "enum": ["web", "wechat"] },
+    "channel": { "enum": ["web", "wechat", "ppt"] },
     "input_hash": { "type": "string", "minLength": 1 },
     "files": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "capabilities_used": { "type": "array", "items": { "type": "string" } },

@@ -2,6 +2,14 @@ export type Revision = string;
 export type VisualMode = "auto" | "required" | "off";
 export type CompositionMode = "reading" | "workshop" | "atlas";
 export type DiagramKind = "flow" | "relationship" | "state";
+export type TeachingThemeId =
+  | "classic-manual"
+  | "storybook"
+  | "nature-explorer"
+  | "active-classroom"
+  | "junior-lab"
+  | "editorial-desk"
+  | "future-lab";
 
 export interface DiagramSpec {
   schema_version: 1;
@@ -51,7 +59,7 @@ export interface PublicationBrief {
   angle: string;
   include: string[];
   exclude: string[];
-  theme: "field-manual";
+  theme: TeachingThemeId | "field-manual";
   author: string;
   summary: string;
   cover: { mode: "generated" | "visual-asset"; asset_id?: string };
@@ -64,7 +72,7 @@ export interface ArtifactManifest {
   lesson_id: string;
   lesson_revision: Revision;
   design_profile_revision: Revision;
-  channel: "web" | "wechat";
+  channel: "web" | "wechat" | "ppt";
   input_hash: string;
   files: string[];
   capabilities_used: string[];

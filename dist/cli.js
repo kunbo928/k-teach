@@ -12,6 +12,7 @@ import { renderWeb } from "./web-renderer.js";
 import { renderDiagram } from "./diagram-renderer.js";
 import { registerVisualAsset } from "./visuals.js";
 import { renderWechat } from "./wechat-renderer.js";
+import { renderPpt } from "./ppt-renderer.js";
 import {
   confirmInteractivePublish,
   createWechatDraft,
@@ -40,6 +41,7 @@ import {
   selectTools,
 } from "./agent-integration.js";
 import { searchableMultiSelect } from "./searchable-multi-select.js";
+import { TEACHING_THEME_IDS } from "./teaching-themes.js";
 
 export const CLI_VERSION = "0.2.0";
 
@@ -74,9 +76,10 @@ async function chooseTools(
 }
 
 const CAPABILITIES = {
-  core: ["lesson-bundle", "web", "diagram"],
+  core: ["lesson-bundle", "web", "diagram", "ppt"],
   optional: ["visual-provider", "wechat"],
   visual_modes: ["auto", "required", "off"],
+  teaching_themes: TEACHING_THEME_IDS,
 }         ;
 
 function writeError(error             )       {
@@ -204,6 +207,34 @@ export async function main(args          )                  {
       });
       const output = await renderWeb(workspaceRoot, config.output_dir);
       process.stdout.write(`Web course rendered to ${output}\n`);
+      return 0;
+    }
+    if (
+      command === "render" &&
+      (args[1] === "ppt" || args[1] === "presentation")
+    ) {
+      const lesson = option(args, "--lesson");
+      if (!lesson) {
+        throw new KTeachError(
+          "validation-failed",
+          "--lesson is required for PPT rendering.",
+          "Run k-teach render ppt --lesson <lesson-id>.",
+        );
+      }
+      const workspaceRoot = await resolveTeach(args);
+      await assertWorkspaceIsCurrent(workspaceRoot);
+      const configRoot = await resolveProjectConfigRoot(workspaceRoot);
+      const userConfigDir =
+        process.env.XDG_CONFIG_HOME ??
+        `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
+      const config = await resolveConfig({ cwd: configRoot, userConfigDir });
+      const output = await renderPpt(
+        workspaceRoot,
+        lesson,
+        config.output_dir,
+        option(args, "--theme"),
+      );
+      process.stdout.write(`HTML PPT rendered to ${output}\n`);
       return 0;
     }
     if (command === "render" && args[1] === "diagram") {

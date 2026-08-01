@@ -1,4 +1,4 @@
 interface:
   display_name: "K Teach"
-  short_description: "跨平台构建长期学习空间、Web 课程与可选微信公众号内容"
-  default_prompt: "使用 $k-teach 为这个主题建立学习空间并设计下一节课程。"
+  short_description: "按用途生成学习页、公众号文章或 HTML 演示文稿"
+  default_prompt: "使用 $k-teach 先确认内容用途，再生成适合学习、公众号或 PPT 的结果。"

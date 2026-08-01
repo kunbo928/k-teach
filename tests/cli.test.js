@@ -141,9 +141,18 @@ test("capabilities reports deterministic core and optional boundaries", async ()
 
   assert.equal(result.exitCode, 0);
   assert.deepEqual(JSON.parse(result.stdout), {
-    core: ["lesson-bundle", "web", "diagram"],
+    core: ["lesson-bundle", "web", "diagram", "ppt"],
     optional: ["visual-provider", "wechat"],
     visual_modes: ["auto", "required", "off"],
+    teaching_themes: [
+      "classic-manual",
+      "storybook",
+      "nature-explorer",
+      "active-classroom",
+      "junior-lab",
+      "editorial-desk",
+      "future-lab",
+    ],
   });
 });
 
@@ -368,12 +377,30 @@ feedback: 当前同步任务结束后先清空微任务队列。
     "utf8",
   );
   const css = await readFile(path.join(output, "assets", "field-manual.css"), "utf8");
+  const themesCss = await readFile(
+    path.join(output, "assets", "teaching-themes.css"),
+    "utf8",
+  );
 
   assert.match(index, /理解事件循环/);
   assert.match(page, /class="lesson mode-workshop"/);
   assert.match(page, /<noscript>/);
   assert.match(page, /<details class="answer-disclosure"/);
   assert.match(page, /data-theme-toggle/);
+  assert.match(page, /data-teaching-theme-select/);
+  assert.match(page, /data-teaching-theme="classic-manual"/);
+  for (const theme of [
+    "classic-manual",
+    "storybook",
+    "nature-explorer",
+    "active-classroom",
+    "junior-lab",
+    "editorial-desk",
+    "future-lab",
+  ]) {
+    assert.match(page, new RegExp(`value="${theme}"`));
+    assert.match(themesCss, new RegExp(`data-teaching-theme="${theme}"`));
+  }
   assert.match(page, /class="katex"/);
   assert.match(page, /class="katex-display"/);
   assert.match(page, /aria-hidden="true"/);

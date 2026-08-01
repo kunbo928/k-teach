@@ -1,6 +1,6 @@
 ---
 name: k-teach
-description: Build and maintain multiple mission-driven Teachs with source-grounded Lesson Bundles, polished local Web Lessons, deterministic diagrams, optional generated visuals, and explicitly selected WeChat articles. Use when an AI agent needs to teach topics over multiple sessions, create or revise a lesson, design an interactive course page, track learning progress, or prepare content for a WeChat official account.
+description: Build and maintain multiple mission-driven Teachs with source-grounded Lesson Bundles, polished learning pages, WeChat-ready articles, and HTML presentations. Use when an AI agent needs to teach topics over multiple sessions, create or revise a lesson, design an interactive course page, track learning progress, prepare content for a WeChat official account, or turn teaching content into a PPT-style slide deck.
 ---
 
 # K Teach
@@ -13,26 +13,39 @@ rendering, preview, media processing, and publication operations.
 
 ## Workflow
 
-1. Select the intended Teach. If it does not exist, create it with
+1. Determine the intended use before designing the output. When the request
+   does not already make it clear, ask one concise question with these choices:
+   `学习`、`公众号`、`PPT`. Do not ask again when the user has already named or
+   clearly implied the use. Read
+   [output-intents.md](references/output-intents.md) and follow exactly one
+   primary route.
+2. Select the intended Teach. If it does not exist, create it with
    `k-teach teach create <id>`. Read that Teach's mission, current learning state, trusted sources, and
    existing Lesson Bundles before proposing work.
-2. Define the next lesson around a concrete capability the learner should gain.
-3. Research claims against suitable primary sources and record citations.
-4. Create or revise the Lesson Bundle without writing channel-specific content
+3. Define the next lesson around a concrete capability the learner should gain.
+4. Research claims against suitable primary sources and record citations.
+5. Create or revise the Lesson Bundle without writing channel-specific content
    back into it. Store every learner action as a schema-valid
    `exercises/*.yaml` file; never create Markdown exercise or answer-sheet
    files, which Web rendering does not consume. Place every exercise exactly
    once with `{{exercise:<id>}}` at the relevant point in `lesson.md`; never
    direct the learner to open an exercise file.
-5. Choose a Learning Asset Plan: deterministic Diagram, optional generated
+6. Choose a Learning Asset Plan: deterministic Diagram, optional generated
    visuals, or text only. Never make generated visuals a prerequisite for core
    teaching. Declare every selected local Diagram, illustration, interactive,
    or narration in `media/assets.yaml`, then place it at the exact teaching
    moment with `{{asset:<id>}}` in `lesson.md`. Audio requires an equivalent
    transcript; interactive assets must remain usable through adjacent text.
-6. Render the complete local Web Lesson with the selected Field Manual profile.
-7. Create a WeChat article only when the user supplies an explicit Publication
-   Brief selecting what may be public.
+7. Produce the selected output:
+   - `学习`: render the complete local Web Lesson with the selected Field Manual
+     profile; this is the existing default learning experience.
+   - `公众号`: require an explicit Publication Brief, derive only its selected
+     public content, then run `k-teach wechat render --brief <brief-id>` for the
+     paste-ready layout, copy preview, cover, media, and validation manifest.
+   - `PPT`: derive the presentation from the Lesson Bundle, then run
+     `k-teach render ppt --lesson <lesson-id> [--theme <theme-id>]` for a
+     themed 16:9 HTML deck with keyboard navigation, overview, presenter mode,
+     notes, and print export.
 8. Stop at local output or draft unless the user separately authorizes a real
    remote action. Public publishing always requires current interactive final
    confirmation.
@@ -54,6 +67,10 @@ rendering, preview, media processing, and publication operations.
 
 Read [teaching-workflow.md](references/teaching-workflow.md) before selecting,
 creating, or recording a lesson. Read
+[output-intents.md](references/output-intents.md) before asking about or routing
+the intended use. Read
+[teaching-themes.md](references/teaching-themes.md) before recommending,
+selecting, or changing a Teaching Theme. Read
 [core-contracts.md](references/core-contracts.md) when creating domain documents
 or adapters. Read [diagrams.md](references/diagrams.md) when the Learning Asset
 Plan calls for a process, relationship, or state diagram. Read a
@@ -84,6 +101,10 @@ The CLI validates and records the output; it never invokes the provider.
 Render an explicit Publication Brief with
 `k-teach wechat render --brief <brief-id>`. This produces only
 local article, preview, cover, media, and manifest files.
+Generate a native static presentation with
+`k-teach render ppt --lesson <lesson-id> [--theme <theme-id>]`. K Teach uses
+the selected or Teach-default Teaching Theme, places exercise answers in
+presenter notes, and writes the deck under `.k-teach/output/ppt/`.
 For an explicitly requested remote WeChat operation, read
 [wechat-rendering.md](references/wechat-rendering.md), run `doctor wechat`,
 create a draft, and persist the returned attempt ID. Preview requires an
