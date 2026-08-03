@@ -1,6 +1,6 @@
 import path from "node:path";
 import { spawn } from "node:child_process";
-import { access, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import { stdin, stdout } from "node:process";
 
 import { KTeachError } from "./errors.js";
@@ -43,7 +43,7 @@ import { searchableMultiSelect } from "./searchable-multi-select.js";
 import { TEACHING_THEME_IDS } from "./teaching-themes.js";
 import { addWechatAccount, markWechatAccountSuccessful, maskedAppId, readWechatAccounts, requireWechatAccount } from "./wechat-accounts.js";
 
-export const CLI_VERSION = "0.3.1";
+export const CLI_VERSION = "0.4.0";
 
 async function chooseTools(
   projectRoot        ,
@@ -402,8 +402,16 @@ export async function main(args          )                  {
       const account = await resolveWechatAccountAlias(option(args, "--account"), config.wechat_account);
       const artifactDir = path.resolve(workspaceRoot, config.output_dir, "wechat", brief);
       const registered = await requireWechatAccount(account).catch(() => undefined);
-      const approved = await confirmDraft(`WeChat draft\nAccount: ${account}${registered ? ` · ${registered.name} · ${maskedAppId(registered.app_id)}` : ""}\nBrief: ${brief}`);
-      if (!approved) throw new KTeachError("validation-failed", "WeChat draft creation was cancelled.", "The local artifact remains unchanged; rerun when ready.");
+      const manifest = JSON.parse(await readFile(path.join(artifactDir, "manifest.json"), "utf8"))
+
+       ;
+      const draftAuthorized =
+        manifest.publication_brief?.draft_delivery?.authorized === true &&
+        manifest.publication_brief.draft_delivery.account_alias === account;
+      if (!draftAuthorized) {
+        const approved = await confirmDraft(`WeChat draft\nAccount: ${account}${registered ? ` · ${registered.name} · ${maskedAppId(registered.app_id)}` : ""}\nBrief: ${brief}`);
+        if (!approved) throw new KTeachError("validation-failed", "WeChat draft creation was cancelled.", "The local artifact remains unchanged; rerun when ready.");
+      }
       const attempt = await createWechatDraft(
         artifactDir,
         await publisherOptions(workspaceRoot, account),

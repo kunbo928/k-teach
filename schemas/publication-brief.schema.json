@@ -29,6 +29,15 @@
         "asset_id": { "type": "string", "minLength": 1 }
       }
     },
+    "draft_delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["account_alias", "authorized"],
+      "properties": {
+        "account_alias": { "type": "string", "minLength": 1 },
+        "authorized": { "const": true }
+      }
+    },
     "authorized_for_publication": { "type": "boolean" }
   }
 }

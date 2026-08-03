@@ -68,6 +68,17 @@ visuals: auto
 
 ![事件循环处理流程](media/diagrams/request-flow.yaml)
 
+{{asset:request-flow-embedded}}
+
+\`\`\`json
+{"queue":["microtask","timer"],"active":true}
+\`\`\`
+
+\`\`\`python
+def run(queue):
+    return queue.pop(0)
+\`\`\`
+
 ## 不要发布
 
 这是只属于本地课程的补充说明。
@@ -75,6 +86,19 @@ visuals: auto
 ## 现在练习
 
 {{exercise:predict}}
+`,
+  );
+  await writeFile(
+    path.join(lesson, "media", "assets.yaml"),
+    `schema_version: 1
+lesson_id: event-loop-01
+lesson_revision: 2026-07-27T00:00:00Z
+assets:
+  - id: request-flow-embedded
+    kind: diagram
+    title: 事件循环嵌入图
+    description: 展示任务队列处理顺序
+    source: media/diagrams/request-flow.yaml
 `,
   );
   await writeFile(
@@ -216,8 +240,23 @@ authorized_for_publication: false
 
   assert.match(article, /^<section style=/);
   assert.match(article, /<span leaf="">/);
+  for (const component of [
+    "cover-breaking",
+    "toc-editorial",
+    "chapter-heading",
+    "content-card",
+    "article-signature",
+  ]) {
+    assert.match(article, new RegExp(`data-wechat-component="${component}"`));
+  }
   assert.match(article, /建立模型/);
   assert.match(article, /src="KT_WECHAT_MEDIA_001"/);
+  assert.match(article, /data-embedded-asset="request-flow-embedded"/);
+  assert.doesNotMatch(article, /\{\{asset:/);
+  assert.match(article, /data-code-language="json"/);
+  assert.match(article, /data-code-language="python"/);
+  assert.match(article, /data-syntax-token="(?:key|keyword)"/);
+  assert.match(article, /background:#202B26;color:#E8ECE9/);
   assert.match(article, /Node\.js 事件循环文档/);
   assert.doesNotMatch(article, /不要发布|现在练习|答案|学习进度/);
   assert.doesNotMatch(article, /<script|<style|<div|class=|id=/i);
@@ -263,13 +302,23 @@ authorized_for_publication: false
   assert.match(proposals, /并排比较/);
   assert.match(proposals, /@media\(max-width:720px\)/);
   assert.match(proposals, /article\.innerHTML/);
+  assert.doesNotMatch(proposals, /KT_WECHAT_MEDIA_/);
+  assert.match(proposals, /src="media\/request-flow\.png"/);
+  assert.match(proposals, /src="media\/request-flow-embedded\.png"/);
   const candidates = await Promise.all(
     ["emerald-editorial", "graphite-minimal", "olive-journal"].map((id) =>
       readFile(path.join(output, "proposals", `${id}.html`), "utf8"),
     ),
   );
   assert.equal(new Set(candidates).size, 3);
+  for (const candidate of candidates) {
+    assert.doesNotMatch(candidate, /KT_WECHAT_MEDIA_/);
+    assert.match(candidate, /src="\.\.\/media\/request-flow\.png"/);
+    assert.match(candidate, /src="\.\.\/media\/request-flow-embedded\.png"/);
+  }
   assert.match(candidates[0], /精选导读/);
+  assert.match(candidates[0], /linear-gradient/);
+  assert.match(candidates[0], /border-radius:20px/);
   assert.match(candidates[1], /FIELD NOTE/);
   assert.match(candidates[2], /阅读手记/);
   for (const candidate of candidates) {

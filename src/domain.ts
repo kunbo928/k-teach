@@ -1,7 +1,7 @@
 export type Revision = string;
 export type VisualMode = "auto" | "required" | "off";
 export type CompositionMode = "reading" | "workshop" | "atlas";
-export type DiagramKind = "flow" | "relationship" | "state";
+export type DiagramKind = "flow" | "relationship" | "state" | "sequence";
 export type TeachingThemeId =
   | "classic-manual"
   | "storybook"
@@ -107,6 +107,10 @@ export interface PublicationBrief {
   author: string;
   summary: string;
   cover: { mode: "generated" | "visual-asset"; asset_id?: string };
+  draft_delivery?: {
+    account_alias: string;
+    authorized: true;
+  };
   authorized_for_publication: boolean;
 }
 
@@ -165,6 +169,8 @@ export interface PublicationAttempt {
   authorization: {
     brief_id: string;
     brief_revision: Revision;
+    authorized_for_draft?: boolean;
+    draft_account_alias?: string;
     authorized_for_publication: boolean;
   };
   current_operation: "none" | "upload-media" | "create-draft" | "send-preview" | "submit-publish" | "poll-status";

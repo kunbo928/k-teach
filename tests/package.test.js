@@ -38,6 +38,10 @@ test("the packaged Skill routes learning, WeChat, and PPT intents explicitly", a
   assert.match(skill, /`学习`、`公众号`、`PPT`/);
   assert.match(skill, /k-teach wechat render/);
   assert.match(skill, /k-teach render ppt/);
+  assert.match(
+    skill,
+    /render-proposals[\s\S]+immediately run `k-teach preview --open`/,
+  );
   assert.match(routing, /学习、公众号，还是 PPT/);
   assert.match(routing, /Do not call an HTML deck a `\.pptx`/);
   assert.match(routing, /must not\s+depend on another Agent Skill/);

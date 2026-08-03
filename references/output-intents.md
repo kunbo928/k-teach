@@ -34,11 +34,17 @@ Treat the article as a public derivative, not as the lesson itself.
 
 1. Require a Publication Brief that selects the public sections, audience,
    angle, exclusions, title, author, summary, cover, and authorization state.
-2. For an ordinary article request, run `k-teach wechat render --brief
-   <brief-id>` with the default `emerald-editorial` Channel Theme, validate the
-   artifact, select one account, show the summary, and ask before creating the
-   remote draft. If the user explicitly requests theme preview, run
-   `k-teach wechat render-proposals --brief <brief-id>` first. If the user says
+2. For an ordinary article request, clarify the article and target account,
+   then summarize once that the workflow will create a remote draft. When the
+   user approves that outcome, record `draft_delivery.account_alias` and
+   `draft_delivery.authorized: true` in the Publication Brief. Run `k-teach
+   wechat render --brief <brief-id>` with the default `emerald-editorial`
+   Channel Theme, validate the artifact, and create the draft without asking
+   again between deterministic commands. If the user explicitly requests theme preview, run
+   `k-teach wechat render-proposals --brief <brief-id>` first, then immediately
+   run `k-teach preview --open` from the Learning Project root and keep the Vite
+   process alive. Return the actual printed HTTP URL because occupied ports are
+   avoided automatically. If the user says
    local-only, stop after rendering.
    only selected Lesson Bundle content, preserves facts and citations, and
    omits exercises, answers, progress, private notes, and implicit local links.
@@ -47,8 +53,8 @@ Treat the article as a public derivative, not as the lesson itself.
    text wrappers, reusable editorial components, controlled color, strong
    section rhythm, and platform-safe markup.
 4. Never infer public publication from article generation or draft creation.
-   Direct public publication may skip theme preview and a separate draft
-   confirmation, but not validation, exact final confirmation, or polling.
+   Direct public publication may skip theme preview, but not validation, its
+   separate exact final confirmation, or polling.
 
 Do not invoke or require another Skill for writing or layout. Do not substitute
 the learning-page renderer for the native WeChat renderer.

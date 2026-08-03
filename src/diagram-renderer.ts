@@ -9,9 +9,9 @@ import type { DiagramSpec } from "./domain.ts";
 import { KTeachError } from "./errors.ts";
 import { validateDocument } from "./schema.ts";
 
-const NODE_WIDTH = 200;
-const NODE_HEIGHT = 76;
-const GAP = 72;
+const NODE_WIDTH = 240;
+const NODE_HEIGHT = 108;
+const GAP = 60;
 const PADDING = 48;
 const TITLE_HEIGHT = 92;
 
@@ -27,6 +27,29 @@ function escapeXml(value: unknown): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
+}
+
+function wrapDiagramText(value: string, maxUnits: number): string[] {
+  const lines: string[] = [];
+  let line = "";
+  let units = 0;
+  for (const character of Array.from(value)) {
+    const size = /[\u3400-\u9fff]/.test(character) ? 2 : 1;
+    if (line && units + size > maxUnits) {
+      lines.push(line);
+      line = character;
+      units = size;
+    } else {
+      line += character;
+      units += size;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.slice(0, 3);
+}
+
+function textTspans(lines: string[], x: number, startY: number, lineHeight: number): string {
+  return lines.map((line, index) => `<tspan x="${x}" y="${startY + index * lineHeight}">${escapeXml(line)}</tspan>`).join("");
 }
 
 function assertGraphIntegrity(spec: DiagramSpec): void {
@@ -153,31 +176,60 @@ function renderNode(
   point: Point,
 ): string {
   const role = node.role ?? "step";
-  const detail = node.detail
-    ? `<text class="node-detail" x="${point.x + NODE_WIDTH / 2}" y="${
-        point.y + 51
-      }">${escapeXml(node.detail)}</text>`
+  const centerX = point.x + NODE_WIDTH / 2;
+  const labelLines = wrapDiagramText(node.label, 27);
+  const detailLines = node.detail ? wrapDiagramText(node.detail, 38) : [];
+  const labelStart = point.y + (detailLines.length > 0 ? 29 : 45 - (labelLines.length - 1) * 8);
+  const detailStart = point.y + 70;
+  const detail = detailLines.length > 0
+    ? `<text class="node-detail">${textTspans(detailLines, centerX, detailStart, 14)}</text>`
     : "";
   if (role === "decision") {
     const cx = point.x + NODE_WIDTH / 2;
     const cy = point.y + NODE_HEIGHT / 2;
     return `<g class="node role-decision"><polygon points="${cx},${point.y} ${
       point.x + NODE_WIDTH
-    },${cy} ${cx},${point.y + NODE_HEIGHT} ${point.x},${cy}"/><text class="node-label" x="${cx}" y="${
-      cy + 4
-    }">${escapeXml(node.label)}</text></g>`;
+    },${cy} ${cx},${point.y + NODE_HEIGHT} ${point.x},${cy}"/><text class="node-label">${textTspans(labelLines, cx, cy - (labelLines.length - 1) * 8 + 4, 17)}</text></g>`;
   }
   return `<g class="node role-${escapeXml(role)}"><rect x="${point.x}" y="${
     point.y
   }" rx="${role === "start" || role === "end" ? 38 : 3}" width="${NODE_WIDTH}" height="${NODE_HEIGHT}"/><text class="node-label" x="${
     point.x + NODE_WIDTH / 2
-  }" y="${point.y + (node.detail ? 31 : 42)}">${escapeXml(
-    node.label,
-  )}</text>${detail}</g>`;
+  }">${textTspans(labelLines, centerX, labelStart, 17)}</text>${detail}</g>`;
+}
+
+function renderSequenceSvg(spec: DiagramSpec): string {
+  const participantWidth = 150;
+  const participantGap = 70;
+  const messageGap = 64;
+  const headerY = TITLE_HEIGHT;
+  const lifelineTop = headerY + 54;
+  const width = PADDING * 2 + spec.nodes.length * participantWidth + Math.max(0, spec.nodes.length - 1) * participantGap;
+  const height = lifelineTop + Math.max(1, spec.edges.length) * messageGap + 56;
+  const centers = new Map(spec.nodes.map((node, index) => [node.id, PADDING + participantWidth / 2 + index * (participantWidth + participantGap)]));
+  const participants = spec.nodes.map((node) => {
+    const center = centers.get(node.id)!;
+    return `<g class="sequence-participant"><rect x="${center - participantWidth / 2}" y="${headerY}" width="${participantWidth}" height="44" rx="8"/><text x="${center}" y="${headerY + 28}">${escapeXml(node.label)}</text><path class="sequence-lifeline" d="M ${center} ${lifelineTop} L ${center} ${height - 30}"/></g>`;
+  }).join("");
+  const messages = spec.edges.map((edge, index) => {
+    const from = centers.get(edge.from)!;
+    const to = centers.get(edge.to)!;
+    const y = lifelineTop + 38 + index * messageGap;
+    const direction = to >= from ? 1 : -1;
+    const labelX = (from + to) / 2;
+    return `<g class="sequence-message"><path d="M ${from} ${y} L ${to - direction * 7} ${y}" marker-end="url(#arrow)"/><text x="${labelX}" y="${y - 10}">${escapeXml(edge.label ?? "消息")}</text><circle cx="${from}" cy="${y}" r="3"/></g>`;
+  }).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="${spec.id}-title ${spec.id}-desc">
+  <title id="${spec.id}-title">${escapeXml(spec.title)}</title><desc id="${spec.id}-desc">${escapeXml(spec.description)}</desc>
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M 0 0 L 8 4 L 0 8 z" fill="#315c49"/></marker></defs>
+  <rect width="100%" height="100%" fill="#f6f1e7"/><text x="${PADDING}" y="29" fill="#647069" font-family="system-ui,sans-serif" font-size="11" letter-spacing="2">SEQUENCE</text><text x="${PADDING}" y="61" fill="#17221d" font-family="Songti SC,serif" font-size="22" font-weight="700">${escapeXml(spec.title)}</text>
+  <style>text{font-family:ui-sans-serif,-apple-system,"PingFang SC",sans-serif}.sequence-participant rect{fill:#fff;stroke:#315c49;stroke-width:1.5}.sequence-participant text{fill:#17221d;font-size:14px;font-weight:700;text-anchor:middle}.sequence-lifeline{stroke:#9aa39e;stroke-width:1.2;stroke-dasharray:6 6}.sequence-message path{stroke:#315c49;stroke-width:1.8;fill:none}.sequence-message text{fill:#425049;font-size:12px;font-weight:600;text-anchor:middle;paint-order:stroke;stroke:#f6f1e7;stroke-width:6px}.sequence-message circle{fill:#315c49}</style>
+  ${participants}${messages}</svg>`;
 }
 
 export function renderDiagramSvg(spec: DiagramSpec): string {
   assertGraphIntegrity(spec);
+  if (spec.kind === "sequence") return renderSequenceSvg(spec);
   const layout = positions(spec);
   const horizontal = spec.direction === "left-to-right";
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${layout.width} ${layout.height}" role="img" aria-labelledby="${spec.id}-title ${spec.id}-desc">

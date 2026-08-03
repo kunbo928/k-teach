@@ -8,6 +8,30 @@ import {
 } from "../src/contract-migrations.ts";
 import { validateDocument } from "../src/schema.ts";
 
+test("Publication Brief accepts account-scoped uninterrupted draft delivery", async () => {
+  const brief = {
+    schema_version: 2,
+    id: "brief",
+    revision: "b1",
+    lesson_id: "lesson",
+    lesson_revision: "l1",
+    title: "文章",
+    audience: "读者",
+    angle: "教程",
+    include: [],
+    exclude: [],
+    channel_theme: "emerald-editorial",
+    article_type: "tutorial",
+    author: "K Teach",
+    summary: "摘要",
+    cover: { mode: "generated" },
+    draft_delivery: { account_alias: "editorial", authorized: true },
+    authorized_for_publication: false,
+  };
+
+  assert.deepEqual(await validateDocument("publication-brief", brief), []);
+});
+
 test("Publication Brief V1 is read as V2 without mutating the source", async () => {
   const legacy = {
     schema_version: 1,

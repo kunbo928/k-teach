@@ -8,7 +8,7 @@
   "properties": {
     "schema_version": { "const": 1 },
     "id": { "type": "string", "minLength": 1 },
-    "kind": { "enum": ["flow", "relationship", "state"] },
+    "kind": { "enum": ["flow", "relationship", "state", "sequence"] },
     "input_hash": { "type": "string", "minLength": 1 },
     "renderer": { "const": "k-teach-diagram-v1" },
     "design_profile": { "const": "field-manual" },

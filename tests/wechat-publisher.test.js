@@ -44,6 +44,7 @@ async function fixture() {
       publication_brief: {
         id: "public-lesson",
         revision: "brief-r1",
+        draft_delivery: { account_alias: "main", authorized: true },
         authorized_for_publication: true,
       },
       article: { title: "公开课", author: "K Teach", digest: "摘要" },
@@ -125,6 +126,8 @@ test("official publisher uploads media, drafts, previews, confirms publish, and 
     assert.equal(drafted.schema_version, 2);
     assert.equal(drafted.account.app_id_suffix, "app-id");
     assert.equal(drafted.authorization.brief_revision, "brief-r1");
+    assert.equal(drafted.authorization.authorized_for_draft, true);
+    assert.equal(drafted.authorization.draft_account_alias, "main");
     assert.equal(drafted.remote_ids.draft_media_id, "draft-media-id");
     assert.equal(drafted.remote_ids.cover_media_id, "cover-media-id");
     assert.equal(drafted.media_uploads.KT_WECHAT_MEDIA_001, "https://mmbiz.qpic.cn/body.png");

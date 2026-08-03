@@ -26,11 +26,18 @@ edges:
     to: validate
 ```
 
-Supported `kind` values are `flow`, `relationship`, and `state`. Supported
+Supported `kind` values are `flow`, `relationship`, `state`, and `sequence`. Supported
 directions are `top-to-bottom` and `left-to-right`. Node ids must be unique
 lowercase slugs. Every edge endpoint must name an existing node.
 
-Use node `detail` for one short explanatory line. Use semantic roles:
+For `sequence`, nodes are participants in left-to-right order and edges are
+messages in chronological order. The renderer gives each participant a header
+and lifeline, and draws every edge as a labelled directional message. Do not
+model a sequence diagram as a wide `flow`; that becomes unreadable in narrow
+channel layouts.
+
+Use node `detail` for a short explanation. Labels and details wrap inside
+their nodes; keep each concise enough to remain readable on mobile. Use semantic roles:
 `start`, `end`, `decision`, `step`, `source`, `artifact`, or `state`. Do not
 encode meaning only with color.
 

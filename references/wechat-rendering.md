@@ -24,7 +24,12 @@ candidates in one immersive/compare/responsive shell:
 
 ```sh
 k-teach wechat render-proposals --brief <brief-id>
+k-teach preview --open
 ```
+
+Run both commands as one uninterrupted preview workflow from the Learning
+Project root. Keep the Vite process alive and return the HTTP URL it prints;
+do not hand off a `file://` URL and do not assume port 4173 is available.
 
 Output lives under `.k-teach/output/wechat/<brief-id>/`:
 
@@ -52,6 +57,12 @@ PNG. The renderer rejects external images, workspace escapes, content images
 at or above the conservative 1 MB upload limit, more than 20 article images,
 unsupported HTML/CSS, long metadata, unwrapped Chinese text, and warnings such
 as half-width Chinese punctuation.
+
+Embedded `diagram` assets support `flow`, `relationship`, `state`, and
+`sequence`. WeChat derivation rasterizes each diagram onto a 1080 px wide paper
+canvas, bounds its height to 480-1800 px, preserves the diagram kind in the
+article markup, and wraps long node labels before rasterization. Use
+`sequence` for participant/message timelines instead of a horizontal `flow`.
 
 `article.html` retains placeholders such as `KT_WECHAT_MEDIA_001`. The local
 preview rewrites them to local media files. A publisher must upload each
@@ -93,6 +104,12 @@ send it to one explicit OpenID:
 k-teach wechat draft --brief <brief-id> --account <alias>
 k-teach wechat preview --attempt <attempt-id> --openid <openid>
 ```
+
+When the clarified Publication Brief contains an authorized `draft_delivery`
+for the selected account, `wechat draft` proceeds without another terminal
+prompt. Without that scoped authorization, the CLI retains its interactive
+confirmation for backward compatibility. Draft authorization never authorizes
+public publication.
 
 The recipient is stored only as a SHA-256 audit hash. Public publishing requires
 both Publication Brief authorization and a current interactive terminal. It has

@@ -29,6 +29,8 @@
       "properties": {
         "brief_id": { "type": "string", "minLength": 1 },
         "brief_revision": { "type": "string", "minLength": 1 },
+        "authorized_for_draft": { "type": "boolean" },
+        "draft_account_alias": { "type": "string", "minLength": 1 },
         "authorized_for_publication": { "type": "boolean" }
       }
     },

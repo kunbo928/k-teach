@@ -16,4 +16,8 @@ author: <署名，最多 16 个字>
 summary: <摘要，最多 120 个字>
 cover:
   mode: generated
+# Set this only after the user has approved creating a draft for this account.
+# draft_delivery:
+#   account_alias: <account-alias>
+#   authorized: true
 authorized_for_publication: false

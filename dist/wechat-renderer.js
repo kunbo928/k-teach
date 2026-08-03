@@ -15,6 +15,10 @@ import { parse } from "yaml";
 
 import { migratePublicationBrief } from "./contract-migrations.js";
 import { renderDiagramSvg } from "./diagram-renderer.js";
+import {
+  resolveEmbeddedAssets,
+
+} from "./embedded-assets.js";
 import { KTeachError } from "./errors.js";
 import { validateLessonBundles } from "./lesson-bundle.js";
 import { validateDocument } from "./schema.js";
@@ -43,8 +47,6 @@ export function applyWechatTheme(
     [COLORS.line, theme.colors.line],
     [COLORS.accent, theme.colors.accent],
     [COLORS.note, theme.colors.accentSoft],
-    ["#202B26", theme.colors.code],
-    ["#E8ECE9", theme.id === "future-lab" ? "#EAF5F4" : theme.colors.ink],
   ];
   let themed = article;
   for (const [source, target] of replacements)
@@ -83,6 +85,44 @@ export function applyWechatTheme(
 
 
 
+
+
+
+function resolvePreviewMedia(
+  article        ,
+  media                 ,
+  relativePrefix = "",
+)         {
+  return media.reduce(
+    (previewArticle, item) =>
+      previewArticle.replaceAll(
+        item.record.placeholder,
+        `${relativePrefix}${item.record.file}`,
+      ),
+    article,
+  );
+}
+
+async function normalizeWechatDiagram(bytes        )                  {
+  const rendered = await sharp(bytes)
+    .flatten({ background: "#F6F1E7" })
+    .resize({ width: 1080, height: 1800, fit: "inside", withoutEnlargement: false })
+    .png({ compressionLevel: 9 })
+    .toBuffer({ resolveWithObject: true });
+  const targetHeight = Math.max(480, Math.min(1800, rendered.info.height));
+  const horizontal = Math.max(0, 1080 - rendered.info.width);
+  const vertical = Math.max(0, targetHeight - rendered.info.height);
+  return sharp(rendered.data)
+    .extend({
+      left: Math.floor(horizontal / 2),
+      right: Math.ceil(horizontal / 2),
+      top: Math.floor(vertical / 2),
+      bottom: Math.ceil(vertical / 2),
+      background: "#F6F1E7",
+    })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
 
 function escapeHtml(value         )         {
   return String(value)
@@ -155,11 +195,48 @@ function renderInline(tokens         , context               )         {
     .join("");
 }
 
+const SYNTAX_COLORS = {
+  key: "#7DD3FC",
+  string: "#86EFAC",
+  number: "#FDE68A",
+  keyword: "#C4B5FD",
+  comment: "#94A3B8",
+};
+
+function formatCode(source        , language        )         {
+  if (language !== "json") return source;
+  try {
+    return JSON.stringify(JSON.parse(source), null, 2);
+  } catch {
+    return source;
+  }
+}
+
+function highlightCodeLine(line        , language        )         {
+  const jsonPattern = /("(?:\\.|[^"\\])*")(?=\s*:)|("(?:\\.|[^"\\])*")|-?\b\d+(?:\.\d+)?\b|\b(?:true|false|null)\b/g;
+  const codePattern = /#[^\n]*|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b\d+(?:\.\d+)?\b|\b(?:def|return|if|else|elif|for|while|in|import|from|as|try|except|class|async|await|const|let|var|function|new|true|false|null|None|True|False)\b/g;
+  const pattern = language === "json" ? jsonPattern : codePattern;
+  let cursor = 0;
+  let output = "";
+  for (const match of line.matchAll(pattern)) {
+    const index = match.index ?? 0;
+    if (index > cursor) output += leaf(line.slice(cursor, index));
+    const token = match[0];
+    const kind = language === "json"
+      ? (match[1] ? "key" : match[2] ? "string" : /^(?:true|false|null)$/.test(token) ? "keyword" : "number")
+      : (/^(?:#|\/\/)/.test(token) ? "comment" : /^(?:"|')/.test(token) ? "string" : /^\d/.test(token) ? "number" : "keyword");
+    output += `<span data-syntax-token="${kind}" style="color:${SYNTAX_COLORS[kind]};">${leaf(token)}</span>`;
+    cursor = index + token.length;
+  }
+  if (cursor < line.length) output += leaf(line.slice(cursor));
+  return output || leaf(" ");
+}
+
 function renderBlock(token       , context               )         {
   if (token.type === "heading") {
     const heading = token                  ;
     const size = heading.depth === 2 ? "20px" : "17px";
-    return `<section style="margin:34px 0 16px;padding-left:12px;border-left:3px solid ${
+    return `<section data-wechat-component="chapter-heading" style="margin:40px 0 20px;padding-left:12px;border-left:3px solid ${
       COLORS.accent
     };"><h${Math.min(heading.depth, 3)} style="margin:0;font-size:${size};line-height:1.45;font-weight:700;color:${
       COLORS.ink
@@ -170,6 +247,12 @@ function renderBlock(token       , context               )         {
   }
   if (token.type === "paragraph") {
     const paragraph = token                    ;
+    const assetMatch = /^\{\{asset:([A-Za-z0-9][A-Za-z0-9_-]*)\}\}\s*$/.exec(paragraph.text);
+    if (assetMatch) {
+      const media = context.embeddedAssets.get(assetMatch[1]);
+      if (!media) return "";
+      return `<section data-embedded-asset="${visibleText(assetMatch[1])}"${media.diagramKind ? ` data-diagram-kind="${media.diagramKind}"` : ""} style="margin:26px 0;padding:10px;border:1px solid ${COLORS.line};border-radius:12px;background:#F6F1E7;"><img src="${media.record.placeholder}" alt="${visibleText(media.alt)}" style="max-width:100%;height:auto;display:block;margin:0 auto;border-radius:8px;"><p style="margin:9px 4px 2px;text-align:center;font-size:12px;line-height:1.6;color:${COLORS.muted};">${leaf(media.alt)}</p></section>`;
+    }
     if (
       paragraph.tokens.length === 1 &&
       paragraph.tokens[0].type === "image"
@@ -218,14 +301,15 @@ function renderBlock(token       , context               )         {
   }
   if (token.type === "code") {
     const code = token               ;
-    const lines = code.text
+    const language = (code.lang ?? "text").trim().toLowerCase().split(/\s+/)[0] || "text";
+    const lines = formatCode(code.text, language)
       .split("\n")
       .map(
         (line) =>
-          `<p style="margin:0;line-height:1.65;">${leaf(line || " ")}</p>`,
+          `<p style="margin:0;min-height:1.65em;line-height:1.65;white-space:pre-wrap;">${highlightCodeLine(line, language)}</p>`,
       )
       .join("");
-    return `<section style="margin:20px 0;padding:16px;border-radius:4px;background:#202B26;color:#E8ECE9;font-family:Menlo,Consolas,monospace;font-size:13px;overflow-wrap:anywhere;">${lines}</section>`;
+    return `<section data-code-language="${visibleText(language)}" style="margin:22px 0;border-radius:8px;overflow:hidden;background:#202B26;color:#E8ECE9;font-family:Menlo,Consolas,monospace;font-size:13px;"><p style="margin:0;padding:7px 14px;border-bottom:1px solid rgba(255,255,255,.12);font-size:10px;line-height:1.4;letter-spacing:1.5px;color:#94A3B8;">${leaf(language.toUpperCase())}</p><section style="padding:14px 16px;overflow-wrap:anywhere;">${lines}</section></section>`;
   }
   if (token.type === "hr") {
     return `<section style="margin:28px auto;border-top:1px solid ${COLORS.line};width:44%;"></section>`;
@@ -306,6 +390,7 @@ function renderArticle(
   const context                = {
     citations: new Map(),
     images: new Map(images.map((image) => [image.href, image])),
+    embeddedAssets: new Map(images.filter((image) => image.href.startsWith("asset:")).map((image) => [image.href.slice(6), image])),
   };
   const blocks = selected
     .map((token) => renderBlock(token, context))
@@ -317,26 +402,41 @@ function renderArticle(
       "Add exact lesson section headings to include, or remove conflicting exclusions.",
     );
   }
-  return `<section style="box-sizing:border-box;max-width:100%;margin:0 auto;padding:8px 6px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;color:${
+  const chapters = selected
+    .filter((token)                          => token.type === "heading" && (token                  ).depth === 2)
+    .map((heading, index) => ({ index: index + 1, title: heading.text.trim() }));
+  const toc = chapters.length > 0
+    ? `<section data-wechat-component="toc-editorial" style="margin:0 20px 34px;padding:18px 18px 8px;border-top:1px solid ${COLORS.line};border-bottom:1px solid ${COLORS.line};background:#FFFFFF;"><p style="margin:0 0 13px;font-size:10px;font-weight:700;letter-spacing:2.5px;color:${COLORS.muted};">${leaf("CONTENTS · 本文目录")}</p>${chapters.map((chapter) => `<section style="display:flex;align-items:flex-start;gap:14px;padding:11px 0;border-top:1px solid ${COLORS.line};"><p style="flex:0 0 42px;margin:0;font-size:20px;line-height:1;font-weight:900;letter-spacing:-1px;color:${COLORS.accent};">${leaf(String(chapter.index).padStart(2, "0"))}</p><p style="flex:1;margin:0;font-size:14px;line-height:1.55;font-weight:750;color:${COLORS.ink};">${leaf(chapter.title)}</p></section>`).join("")}</section>`
+    : "";
+  return `<section style="box-sizing:border-box;max-width:677px;margin:0 auto;padding:0 0 24px;overflow-x:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;color:${
     COLORS.ink
-  };background:${COLORS.paper};">
-  <section style="margin:0 0 28px;padding:18px 18px 16px;border-top:4px solid ${
+  };background:#FFFFFF;line-height:1.75;letter-spacing:.3px;">
+  <section data-wechat-component="cover-breaking" style="margin:0 0 32px;border:1.5px solid ${COLORS.line};border-radius:20px;overflow:hidden;background:#FFFFFF;box-shadow:0 4px 20px rgba(0,0,0,.06);">
+    <section style="padding:30px 26px 26px;">
+      <p style="margin:0 0 24px;font-size:11px;font-weight:700;letter-spacing:3px;color:${COLORS.accent};">${leaf(`K TEACH · ${brief.article_type.toUpperCase()}`)}</p>
+      <p style="margin:0 0 14px;font-size:25px;line-height:1.18;font-weight:900;letter-spacing:-1px;color:${COLORS.ink};">${leaf(brief.title)}</p>
+      <section style="width:52px;height:3px;margin:0 0 12px;border-radius:2px;background:linear-gradient(to right,${COLORS.accent},#34D399);"></section>
+      <p style="margin:0;font-size:13px;line-height:1.7;color:${COLORS.muted};">${leaf(brief.angle)}</p>
+    </section>
+    <section style="padding:11px 26px;background:linear-gradient(135deg,${COLORS.accent},#10B981);"><p style="margin:0;font-size:12px;font-weight:600;color:#FFFFFF;">${leaf(brief.author)}</p></section>
+  </section>
+  ${toc}
+  <section data-wechat-component="content-card" style="margin:0 20px 30px;padding:15px 17px;border:1px dashed ${
     COLORS.accent
-  };background:${COLORS.note};">
-    <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:${
-      COLORS.muted
-    };">${leaf(brief.angle)}</p>
-    <p style="margin:0;font-size:17px;line-height:1.8;font-weight:600;color:${
+  };border-radius:10px;background:${COLORS.note};text-align:center;">
+    <p style="margin:0;font-size:15px;line-height:1.7;font-weight:700;color:${
       COLORS.ink
     };">${leaf(brief.summary)}</p>
   </section>
-  ${blocks}
-  ${renderSources(lesson, context)}
-  <section style="margin-top:30px;padding-top:16px;border-top:1px solid ${
+  <section style="padding:0 20px;">${blocks}
+  ${renderSources(lesson, context)}</section>
+  <section data-wechat-component="article-signature" style="margin:32px 20px 0;padding:18px 0 0;border-top:1px solid ${
     COLORS.line
-  };"><p style="margin:0;font-size:13px;line-height:1.7;color:${
+  };text-align:center;"><p style="margin:0 0 4px;font-size:13px;line-height:1.7;font-weight:700;color:${
+    COLORS.ink
+  };">${leaf(brief.author)}</p><p style="margin:0;font-size:11px;letter-spacing:2px;color:${
     COLORS.muted
-  };">${leaf(`作者：${brief.author}`)}</p></section>
+  };">${leaf("K TEACH · 持续学习与分享")}</p></section>
 </section>
 `;
 }
@@ -392,6 +492,7 @@ async function prepareMedia(
     let bytes        ;
     let fileName        ;
     let kind                                  = "content-image";
+    let diagramKind                              ;
     if (extension === ".yaml" || extension === ".yml") {
       const value = parse(await readFile(sourcePath, "utf8"))           ;
       const errors = await validateDocument("diagram-spec", value);
@@ -403,11 +504,13 @@ async function prepareMedia(
         );
       }
       const spec = value                                          ;
+      diagramKind = spec.kind;
       bytes = await sharp(Buffer.from(renderDiagramSvg(spec)), {
         density: 144,
       })
         .png()
         .toBuffer();
+      bytes = await normalizeWechatDiagram(bytes);
       fileName = `${spec.id}.png`;
       kind = "diagram";
     } else {
@@ -439,11 +542,71 @@ async function prepareMedia(
       href,
       alt: image.text,
       bytes,
+      ...(diagramKind ? { diagramKind } : {}),
       record: {
         kind,
         placeholder,
         source: relativeSource.split(path.sep).join("/"),
         file,
+        content_hash: createHash("sha256").update(bytes).digest("hex"),
+      },
+    });
+  }
+  return prepared;
+}
+
+async function prepareEmbeddedMedia(
+  root        ,
+  lessonDirectory        ,
+  selected         ,
+  assets                            ,
+  startIndex        ,
+)                           {
+  const ids = selected.flatMap((token) => {
+    if (token.type !== "paragraph") return [];
+    const match = /^\{\{asset:([A-Za-z0-9][A-Za-z0-9_-]*)\}\}\s*$/.exec((token                    ).text);
+    return match ? [match[1]] : [];
+  });
+  const prepared                  = [];
+  for (const id of ids) {
+    const asset = assets.get(id);
+    if (!asset) continue;
+    if (asset.kind === "interactive" || asset.kind === "audio") {
+      throw new KTeachError(
+        "render-failed",
+        `Embedded asset ${id} (${asset.kind}) cannot be published as a static WeChat image.`,
+        "Provide a diagram or illustration fallback for the selected public section.",
+      );
+    }
+    const sourcePath = path.resolve(lessonDirectory, asset.source);
+    const extension = path.extname(sourcePath).toLowerCase();
+    let bytes        ;
+    let fileName        ;
+    let diagramKind                              ;
+    if (asset.kind === "diagram" || extension === ".yaml" || extension === ".yml") {
+      const spec = parse(await readFile(sourcePath, "utf8"))                                          ;
+      diagramKind = spec.kind;
+      bytes = await sharp(Buffer.from(renderDiagramSvg(spec)), { density: 144 }).png().toBuffer();
+      bytes = await normalizeWechatDiagram(bytes);
+      fileName = `${id}.png`;
+    } else {
+      const source = await readFile(sourcePath);
+      bytes = extension === ".jpg" || extension === ".jpeg"
+        ? await sharp(source).resize({ width: 1080, withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer()
+        : await sharp(source).resize({ width: 1080, withoutEnlargement: true }).png({ compressionLevel: 9 }).toBuffer();
+      fileName = `${id}${extension === ".jpg" || extension === ".jpeg" ? ".jpg" : ".png"}`;
+    }
+    const placeholder = `KT_WECHAT_MEDIA_${String(startIndex + prepared.length + 1).padStart(3, "0")}`;
+    prepared.push({
+      href: `asset:${id}`,
+      alt: `${asset.title}：${asset.description}`,
+      bytes,
+      ...(diagramKind ? { diagramKind } : {}),
+      record: {
+        kind: asset.kind === "diagram" ? "diagram" : "visual-asset",
+        placeholder,
+        source: path.relative(root, sourcePath).split(path.sep).join("/"),
+        file: `media/${fileName}`,
         content_hash: createHash("sha256").update(bytes).digest("hex"),
       },
     });
@@ -558,12 +721,12 @@ function teachingThemeForChannel(id                )                {
 function applyChannelRecipe(article        , brief                  )         {
   const theme = teachingThemeForChannel(brief.channel_theme);
   const marker = brief.channel_theme === "emerald-editorial"
-    ? `<section style="margin:0 0 18px;padding:0 0 10px;border-bottom:1px solid ${theme.colors.line};"><p style="margin:0;font-size:12px;letter-spacing:2px;color:${theme.colors.accent};">${leaf(`精选导读 · ${brief.article_type.toUpperCase()}`)}</p></section>`
+    ? `<section style="margin:0 20px 18px;padding:0 0 10px;border-bottom:1px solid ${theme.colors.line};"><p style="margin:0;font-size:12px;letter-spacing:2px;color:${theme.colors.accent};">${leaf(`精选导读 · ${brief.article_type.toUpperCase()}`)}</p></section>`
     : brief.channel_theme === "graphite-minimal"
       ? `<section style="margin:0 0 24px;padding:8px 0;border-top:1px solid ${theme.colors.ink};border-bottom:1px solid ${theme.colors.ink};"><p style="margin:0;text-align:center;font-size:11px;letter-spacing:3px;color:${theme.colors.muted};">${leaf(`FIELD NOTE · ${brief.article_type.toUpperCase()}`)}</p></section>`
       : `<section style="margin:0 0 22px;padding:13px 15px;border-left:5px solid ${theme.colors.accent};background:${theme.colors.accentSoft};"><p style="margin:0;font-size:13px;letter-spacing:1px;color:${theme.colors.ink};">${leaf(`阅读手记 · ${brief.article_type.toUpperCase()}`)}</p></section>`;
   let result = article.replace(
-    /(<section style="box-sizing:border-box;max-width:100%;[^>]+>)/,
+    /(<section style="box-sizing:border-box;max-width:[^;]+;[^>]+>)/,
     `$1\n  ${marker}`,
   );
   if (brief.channel_theme === "graphite-minimal") {
@@ -796,7 +959,10 @@ export async function renderWechat(
   }
   const markdown = await readFile(path.join(lessonDirectory, "lesson.md"), "utf8");
   const selected = selectBlocks(markdown, brief);
-  const preparedMedia = await prepareMedia(root, lessonDirectory, selected);
+  const markdownMedia = await prepareMedia(root, lessonDirectory, selected);
+  const embedded = await resolveEmbeddedAssets(lessonDirectory, lesson, markdown);
+  const embeddedMedia = await prepareEmbeddedMedia(root, lessonDirectory, selected, embedded.assets, markdownMedia.length);
+  const preparedMedia = [...markdownMedia, ...embeddedMedia];
   const theme = teachingThemeForChannel(brief.channel_theme);
   const article = applyChannelRecipe(applyWechatTheme(
     renderArticle(lesson, brief, selected, preparedMedia),
@@ -844,6 +1010,7 @@ export async function renderWechat(
     publication_brief: {
       id: brief.id,
       revision: brief.revision,
+      ...(brief.draft_delivery ? { draft_delivery: brief.draft_delivery } : {}),
       authorized_for_publication: brief.authorized_for_publication,
     },
     channel_theme: brief.channel_theme,
@@ -923,20 +1090,29 @@ export async function renderWechat(
       path.join(output, "preview.html"),
       wrapPreview(
         brief.title,
-        preparedMedia.reduce(
-          (previewArticle, media) =>
-            previewArticle.replaceAll(
-              media.record.placeholder,
-              media.record.file,
-            ),
-          article,
-        ),
+        resolvePreviewMedia(article, preparedMedia),
       ),
       "utf8",
     ),
     ...(options.proposals ? [
-      writeFile(path.join(output, "proposals.html"), wrapProposalPreview(brief.title, proposalArticles                                  , brief.channel_theme), "utf8"),
-      ...Object.entries(proposalArticles                                  ).map(([id, candidate]) => writeFile(path.join(output, "proposals", `${id}.html`), candidate, "utf8")),
+      writeFile(
+        path.join(output, "proposals.html"),
+        wrapProposalPreview(
+          brief.title,
+          Object.fromEntries(
+            Object.entries(proposalArticles                                  )
+              .map(([id, candidate]) => [id, resolvePreviewMedia(candidate, preparedMedia)]),
+          )                                  ,
+          brief.channel_theme,
+        ),
+        "utf8",
+      ),
+      ...Object.entries(proposalArticles                                  ).map(([id, candidate]) =>
+        writeFile(
+          path.join(output, "proposals", `${id}.html`),
+          resolvePreviewMedia(candidate, preparedMedia, "../"),
+          "utf8",
+        )),
     ] : []),
     writeFile(
       path.join(output, "manifest.json"),

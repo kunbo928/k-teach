@@ -69,6 +69,11 @@ const OFFICIAL_API_BASE_URL = "https://api.weixin.qq.com";
 
 
 
+
+
+
+
+
 function aliasKey(alias        )         {
   return alias.toUpperCase().replace(/[^A-Z0-9]+/g, "_");
 }
@@ -363,6 +368,11 @@ export async function createWechatDraft(
     authorization: {
       brief_id: manifest.publication_brief.id,
       brief_revision: manifest.publication_brief.revision,
+      authorized_for_draft:
+        manifest.publication_brief.draft_delivery?.authorized === true &&
+        manifest.publication_brief.draft_delivery.account_alias === options.accountAlias,
+      draft_account_alias:
+        manifest.publication_brief.draft_delivery?.account_alias,
       authorized_for_publication:
         manifest.publication_brief.authorized_for_publication,
     },

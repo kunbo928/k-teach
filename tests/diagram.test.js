@@ -93,8 +93,8 @@ test("render diagram creates deterministic accessible SVG, PNG, and manifest", a
   assert.equal(await readFile(manifestPath, "utf8"), firstManifest);
 });
 
-test("flow, relationship, and state fixtures all render through one command", async () => {
-  for (const fixture of ["flow.yaml", "relationship.yaml", "state.yaml"]) {
+test("flow, relationship, state, and sequence fixtures all render through one command", async () => {
+  for (const fixture of ["flow.yaml", "relationship.yaml", "state.yaml", "sequence.yaml"]) {
     const output = await mkdtemp(path.join(tmpdir(), "k-teach-kinds-"));
     const result = await runCli(
       [
@@ -107,5 +107,10 @@ test("flow, relationship, and state fixtures all render through one command", as
       process.cwd(),
     );
     assert.equal(result.exitCode, 0, `${fixture}: ${result.stderr}`);
+    if (fixture === "sequence.yaml") {
+      const svg = await readFile(path.join(output, "tool-sequence.svg"), "utf8");
+      assert.match(svg, /class="sequence-lifeline"/);
+      assert.match(svg, /class="sequence-message"/);
+    }
   }
 });

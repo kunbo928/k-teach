@@ -42,14 +42,22 @@ rendering, preview, media processing, and publication operations.
    - `公众号`: create a Publication Brief V2 with a Channel Theme. Unless the
      user explicitly asks for local-only output or theme preview, render the
      selected/default emerald article, validate it, resolve one registered
-     account, show the draft summary, ask ordinary confirmation, and create a
-     draft. Run `render-proposals` only when preview was explicitly requested.
+     account, summarize the intended delivery once during clarification, record
+     that authorization in `draft_delivery`, and create the draft without
+     asking again between deterministic steps. Run `render-proposals` only when
+     preview was explicitly requested, then immediately run `k-teach preview --open`
+     from the Learning Project root. Keep that Vite process alive and deliver
+     the actual URL printed by the command; never substitute a `file://` URL or
+     assume port 4173.
    - `PPT`: first clarify `teaching` versus `talk`, then create a Presentation
      Brief and run `k-teach render ppt --brief <brief-id>`. One teaching
      objective may span multiple slides; answers and feedback stay in notes.
 8. A WeChat draft is the default remote endpoint for an ordinary WeChat
-   article request. Public publishing still requires explicit authorization,
-   an exact interactive confirmation, submission, and terminal status polling.
+   article request. Once the user has approved that outcome and account, local
+   generation, validation, media preparation, and draft creation form one
+   uninterrupted workflow. Public publishing still requires separate explicit
+   authorization, an exact interactive confirmation, submission, and terminal
+   status polling.
 9. Record learning results, artifact manifests, and publication attempts in the
    selected Teach.
 
