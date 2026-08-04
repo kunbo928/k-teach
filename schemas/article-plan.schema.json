@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/article-plan.schema.json",
+  "title": "Article Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "revision", "kind", "context", "route_brief", "blocks"],
+  "properties": {
+    "schema_version": { "const": 1 }, "id": { "type": "string", "minLength": 1 }, "revision": { "type": "string", "minLength": 1 }, "kind": { "const": "article" },
+    "context": { "type": "object", "additionalProperties": false, "required": ["packet_id", "planning_hash", "lesson_id", "lesson_revision"], "properties": {
+      "packet_id": { "type": "string", "minLength": 1 }, "planning_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+      "lesson_id": { "type": "string", "minLength": 1 }, "lesson_revision": { "type": "string", "minLength": 1 }
+    } },
+    "route_brief": { "type": "object", "additionalProperties": false, "required": ["id", "revision"], "properties": {
+      "id": { "type": "string", "minLength": 1 }, "revision": { "type": "string", "minLength": 1 }
+    } },
+    "blocks": { "type": "array", "minItems": 1, "items": {
+      "type": "object", "additionalProperties": false, "required": ["id", "role", "content", "asset_refs"], "properties": {
+        "id": { "type": "string", "minLength": 1 }, "role": { "enum": ["lead", "section", "bridge", "example", "callout", "summary", "sources"] },
+        "heading": { "type": "string", "minLength": 1 }, "asset_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "content": { "type": "array", "items": { "oneOf": [
+          { "type": "object", "additionalProperties": false, "required": ["mode", "source_refs"], "properties": { "mode": { "const": "reference" }, "source_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } } } },
+          { "type": "object", "additionalProperties": false, "required": ["mode", "text", "source_refs"], "properties": { "mode": { "const": "authored" }, "text": { "type": "string", "minLength": 1 }, "source_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } } } }
+        ] } }
+      }
+    } }
+  }
+}

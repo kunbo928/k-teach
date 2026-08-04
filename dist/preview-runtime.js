@@ -163,7 +163,7 @@ function previewPlugin(options                       , instanceId        )      
           const teach = teaches.get(decodeURIComponent(teachMatch[1]));
           if (teach && await sendFile(teach.root, teachMatch[2] ?? "/", response)) return;
           response.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
-          response.end(errorPage("Teach 预览不存在", pathname, "先运行 k-teach render web，再刷新此页面。"));
+          response.end(errorPage("Teach 预览不存在", pathname, "先运行 k-teach generate --intent learn --lesson <id> --json，再刷新此页面。"));
           return;
         }
         const artifactMatch = pathname.match(/^\/(ppt|wechat)\/([^/]+)(\/.*)?$/);

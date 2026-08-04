@@ -16,6 +16,14 @@ export type ChannelThemeId =
   | "graphite-minimal"
   | "olive-journal";
 export type WechatArticleType = "tutorial" | "analysis" | "narrative";
+export type OutputIntent = "learn" | "ppt" | "wechat";
+export type SemanticBlockKind =
+  | "paragraph"
+  | "list"
+  | "code"
+  | "quote"
+  | "exercise"
+  | "asset";
 
 export interface DiagramSpec {
   schema_version: 1;
@@ -71,24 +79,6 @@ export interface PresentationBrief {
     source: "explicit" | "brief" | "teach-default" | "recommended" | "fallback";
     reason: string;
   };
-}
-
-export interface PublicationBriefV1 {
-  schema_version: 1;
-  id: string;
-  revision: Revision;
-  lesson_id: string;
-  lesson_revision: Revision;
-  title: string;
-  audience: string;
-  angle: string;
-  include: string[];
-  exclude: string[];
-  theme: TeachingThemeId | "field-manual";
-  author: string;
-  summary: string;
-  cover: { mode: "generated" | "visual-asset"; asset_id?: string };
-  authorized_for_publication: boolean;
 }
 
 export interface PublicationBrief {
@@ -181,4 +171,130 @@ export interface PublicationAttempt {
   error_code?: string;
   preview_recipient_hash?: string;
   unknown_operation?: string;
+}
+
+export interface ContextPacket {
+  schema_version: 1;
+  packet_id: string;
+  intent: OutputIntent;
+  teach: { id: string; title: string };
+  lesson: {
+    id: string;
+    revision: Revision;
+    title: string;
+    mission: string;
+    objectives: string[];
+  };
+  sections: Array<{
+    id: string;
+    heading: string;
+    blocks: Array<{
+      id: string;
+      kind: SemanticBlockKind;
+      body: string;
+      asset_ids: string[];
+    }>;
+  }>;
+  sources: Array<{ id: string; title: string; url: string }>;
+  assets: Array<{
+    id: string;
+    kind: "diagram" | "illustration" | "interactive" | "audio";
+    title: string;
+    alt_or_transcript: string;
+    availability: "ready" | "missing" | "stale";
+  }>;
+  route: Readonly<Record<string, unknown>>;
+  diagnostics: {
+    missing_fields: string[];
+    blockers: string[];
+    warnings: string[];
+  };
+  provenance: {
+    input_hash: string;
+    planning_hash: string;
+    lesson_revision: Revision;
+    brief_revision?: Revision;
+  };
+}
+
+export type SemanticContentItem =
+  | { mode: "reference"; source_refs: string[] }
+  | { mode: "authored"; text: string; source_refs: string[] };
+
+export interface SemanticPlanContext {
+  packet_id: string;
+  planning_hash: string;
+  lesson_id: string;
+  lesson_revision: Revision;
+}
+
+export interface ArticlePlan {
+  schema_version: 1;
+  id: string;
+  revision: Revision;
+  kind: "article";
+  context: SemanticPlanContext;
+  route_brief: { id: string; revision: Revision };
+  blocks: Array<{
+    id: string;
+    role: "lead" | "section" | "bridge" | "example" | "callout" | "summary" | "sources";
+    heading?: string;
+    content: SemanticContentItem[];
+    asset_refs: string[];
+  }>;
+}
+
+export interface SlidePlan {
+  schema_version: 1;
+  id: string;
+  revision: Revision;
+  kind: "slide";
+  context: SemanticPlanContext;
+  route_brief: { id: string; revision: Revision };
+  slides: Array<{
+    id: string;
+    role: "cover" | "concept" | "evidence" | "example" | "practice" | "recap" | "sources";
+    title: string;
+    content: SemanticContentItem[];
+    asset_refs: string[];
+    speaker_notes: SemanticContentItem[];
+    duration_seconds: number;
+  }>;
+}
+
+export type GenerationRunState =
+  | "needs_input"
+  | "needs_plan"
+  | "complete"
+  | "attention_required"
+  | "failed";
+
+export interface GenerationRunResult {
+  schema_version: 1;
+  run_id: string;
+  state: GenerationRunState;
+  intent: OutputIntent;
+  input_hash: string;
+  next_action: { code: string | null; fields: string[] };
+  refs: {
+    context_packet: string | null;
+    route_brief: string | null;
+    plan: string | null;
+    artifact: string | null;
+    publication_attempt: string | null;
+  };
+  warnings: string[];
+  error?: { code: string; fields: string[]; refs: string[] };
+}
+
+export interface PlanReviewDelta {
+  schema_version: 1;
+  unchanged: string[];
+  needs_review: Array<{
+    item_id: string;
+    reason: "source_changed" | "source_removed" | "route_changed" | "asset_changed";
+    changed_refs: string[];
+  }>;
+  proposed: Array<{ item_id: string; reason: "newly_selected_content" }>;
+  removed: string[];
 }

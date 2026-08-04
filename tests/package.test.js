@@ -35,13 +35,10 @@ test("the packaged Skill routes learning, WeChat, and PPT intents explicitly", a
     "utf8",
   );
 
-  assert.match(skill, /`学习`、`公众号`、`PPT`/);
-  assert.match(skill, /k-teach wechat render/);
-  assert.match(skill, /k-teach render ppt/);
-  assert.match(
-    skill,
-    /render-proposals[\s\S]+immediately run `k-teach preview --open`/,
-  );
+  assert.match(skill, /学习、公众号还是 PPT/);
+  assert.match(skill, /generate --intent wechat/);
+  assert.match(skill, /generate --intent ppt/);
+  assert.match(skill, /Load one optional reference only/);
   assert.match(routing, /学习、公众号，还是 PPT/);
   assert.match(routing, /Do not call an HTML deck a `\.pptx`/);
   assert.match(routing, /must not\s+depend on another Agent Skill/);
@@ -65,7 +62,7 @@ test("npm build emits a JavaScript CLI that runs without the TypeScript source t
     { cwd: workspace, encoding: "utf8" },
   );
   assert.deepEqual(JSON.parse(result.stdout), {
-    core: ["lesson-bundle", "web", "diagram", "presentation-brief", "ppt", "vite-project-preview"],
+      core: ["lesson-bundle", "context-packet", "semantic-plan", "generation-run", "content-addressed-cache", "web", "diagram", "presentation-brief", "ppt", "vite-project-preview"],
     optional: ["visual-provider", "wechat", "wechat-channel-themes", "wechat-multi-account"],
     visual_modes: ["auto", "required", "off"],
     teaching_themes: [

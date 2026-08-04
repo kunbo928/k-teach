@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/context-packet.schema.json",
+  "title": "Context Packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "packet_id", "intent", "teach", "lesson", "sections", "sources", "assets", "route", "diagnostics", "provenance"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "packet_id": { "type": "string", "minLength": 1 },
+    "intent": { "enum": ["learn", "ppt", "wechat"] },
+    "teach": {
+      "type": "object", "additionalProperties": false, "required": ["id", "title"],
+      "properties": { "id": { "type": "string", "minLength": 1 }, "title": { "type": "string", "minLength": 1 } }
+    },
+    "lesson": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "revision", "title", "mission", "objectives"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 }, "revision": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 }, "mission": { "type": "string", "minLength": 1 },
+        "objectives": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "sections": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "heading", "blocks"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 }, "heading": { "type": "string", "minLength": 1 },
+          "blocks": { "type": "array", "items": {
+            "type": "object", "additionalProperties": false, "required": ["id", "kind", "body", "asset_ids"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "kind": { "enum": ["paragraph", "list", "code", "quote", "exercise", "asset"] },
+              "body": { "type": "string" },
+              "asset_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            }
+          } }
+        }
+      }
+    },
+    "sources": { "type": "array", "items": {
+      "type": "object", "additionalProperties": false, "required": ["id", "title", "url"],
+      "properties": { "id": { "type": "string", "minLength": 1 }, "title": { "type": "string", "minLength": 1 }, "url": { "type": "string", "minLength": 1 } }
+    } },
+    "assets": { "type": "array", "items": {
+      "type": "object", "additionalProperties": false, "required": ["id", "kind", "title", "alt_or_transcript", "availability"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 }, "kind": { "enum": ["diagram", "illustration", "interactive", "audio"] },
+        "title": { "type": "string", "minLength": 1 }, "alt_or_transcript": { "type": "string", "minLength": 1 },
+        "availability": { "enum": ["ready", "missing", "stale"] }
+      }
+    } },
+    "route": { "type": "object" },
+    "diagnostics": {
+      "type": "object", "additionalProperties": false, "required": ["missing_fields", "blockers", "warnings"],
+      "properties": {
+        "missing_fields": { "type": "array", "items": { "type": "string" } },
+        "blockers": { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false, "required": ["input_hash", "planning_hash", "lesson_revision"],
+      "properties": {
+        "input_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "planning_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "lesson_revision": { "type": "string", "minLength": 1 },
+        "brief_revision": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

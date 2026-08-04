@@ -84,19 +84,24 @@ feedback: 当前任务结束后先清空微任务队列。
 `,
   );
 
-  const result = await runCli(
-    [
-      "render",
-      "ppt",
-      "--lesson",
-      "event-loop-01",
-      "--theme",
-      "active-classroom",
-    ],
-    workspace,
-  );
+  const teach = path.join(workspace, "teachs", "main");
+  await mkdir(path.join(teach, "presentations"), { recursive: true });
+  await writeFile(path.join(teach, "presentations", "event-loop-deck.yaml"), `schema_version: 1
+id: event-loop-deck
+revision: deck-r1
+purpose: teaching
+audience: JavaScript 初学者
+duration_minutes: 10
+lesson_id: event-loop-01
+lesson_revision: 2026-07-31T00:00:00Z
+include: [建立模型, 现场判断]
+exclude: []
+theme: { id: active-classroom, source: brief, reason: 课堂练习 }
+`);
+  const command = ["generate", "--intent", "ppt", "--brief", "event-loop-deck", "--json"];
+  assert.equal((await runCli(command, workspace)).exitCode, 0);
+  const result = await runCli(command, workspace);
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(result.stderr, /Migration notice.*Presentation Brief/);
   const output = path.join(
     workspace,
     "teachs",
@@ -104,7 +109,7 @@ feedback: 当前任务结束后先清空微任务队列。
     ".k-teach",
     "output",
     "ppt",
-    "event-loop-01",
+    "event-loop-deck",
   );
   const html = await readFile(path.join(output, "index.html"), "utf8");
   const manifest = JSON.parse(
@@ -121,6 +126,9 @@ feedback: 当前任务结束后先清空微任务队列。
   assert.match(html, /\.help,.theme-name\{[^}]*color:var\(--muted\)/);
   assert.match(html, /Slide overview|Presenter mode/);
   assert.match(html, /@media print/);
+  assert.match(html, /@page\{size:13\.333in 7\.5in;margin:0\}/);
+  assert.match(html, /\.slide\.is-active\{animation:none\}/);
+  assert.match(html, /\.theme-name,.overview,.presenter\{display:none!important\}/);
   assert.doesNotMatch(html, /https:\/\/cdn/i);
   assert.ok((await stat(path.join(output, "index.html"))).size > 5_000);
   assert.equal(manifest.channel, "ppt");
@@ -165,11 +173,26 @@ visuals: off
     "# 主题目录\n\n## 同一内容\n\n每套主题都必须真实渲染。\n",
   );
 
+  const teach = path.join(workspace, "teachs", "main");
+  await mkdir(path.join(teach, "presentations"), { recursive: true });
+
   for (const theme of TEACHING_THEMES) {
-    const result = await runCli(
-      ["render", "ppt", "--lesson", "theme-catalog", "--theme", theme.id],
-      workspace,
-    );
+    const briefId = `theme-${theme.id}`;
+    await writeFile(path.join(teach, "presentations", `${briefId}.yaml`), `schema_version: 1
+id: ${briefId}
+revision: ${briefId}-r1
+purpose: teaching
+audience: 测试
+duration_minutes: 5
+lesson_id: theme-catalog
+lesson_revision: 2026-07-31T00:00:00Z
+include: [同一内容]
+exclude: []
+theme: { id: ${theme.id}, source: brief, reason: 主题验证 }
+`);
+    const command = ["generate", "--intent", "ppt", "--brief", briefId, "--json"];
+    assert.equal((await runCli(command, workspace)).exitCode, 0);
+    const result = await runCli(command, workspace);
     assert.equal(result.exitCode, 0, `${theme.id}: ${result.stderr}`);
     const output = path.join(
       workspace,
@@ -178,7 +201,7 @@ visuals: off
       ".k-teach",
       "output",
       "ppt",
-      "theme-catalog",
+      briefId,
     );
     const html = await readFile(path.join(output, "index.html"), "utf8");
     const manifest = JSON.parse(
@@ -256,8 +279,11 @@ theme:
   await writeFile(path.join(teach, "presentations", "class.yaml"), brief("class", "teaching", "active-classroom"));
   await writeFile(path.join(teach, "presentations", "conference.yaml"), brief("conference", "talk", "editorial-desk"));
 
-  assert.equal((await runCli(["render", "ppt", "--brief", "class"], workspace)).exitCode, 0);
-  assert.equal((await runCli(["render", "ppt", "--brief", "conference"], workspace)).exitCode, 0);
+  for (const id of ["class", "conference"]) {
+    const command = ["generate", "--intent", "ppt", "--brief", id, "--json"];
+    assert.equal((await runCli(command, workspace)).exitCode, 0);
+    assert.equal((await runCli(command, workspace)).exitCode, 0);
+  }
   const teaching = await readFile(path.join(teach, ".k-teach", "output", "ppt", "class", "index.html"), "utf8");
   const talk = await readFile(path.join(teach, ".k-teach", "output", "ppt", "conference", "index.html"), "utf8");
   assert.match(teaching, /K TEACH · TEACHING/);

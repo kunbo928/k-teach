@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/plan-review-delta.schema.json",
+  "title": "Plan Review Delta",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "unchanged", "needs_review", "proposed", "removed"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "unchanged": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "needs_review": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["item_id", "reason", "changed_refs"], "properties": {
+      "item_id": { "type": "string", "minLength": 1 }, "reason": { "enum": ["source_changed", "source_removed", "route_changed", "asset_changed"] },
+      "changed_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    } },
+    "proposed": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["item_id", "reason"], "properties": {
+      "item_id": { "type": "string", "minLength": 1 }, "reason": { "const": "newly_selected_content" }
+    } },
+    "removed": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

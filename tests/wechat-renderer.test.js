@@ -193,7 +193,7 @@ feedback: 当前任务结束后先清空微任务队列。
   );
   await writeFile(
     path.join(workspace, "teachs", "main", "publications", "event-loop-public.yaml"),
-    `schema_version: 1
+    `schema_version: 2
 id: event-loop-public
 revision: 2026-07-27T01:00:00Z
 lesson_id: event-loop-01
@@ -206,7 +206,8 @@ include:
   - 现在练习
 exclude:
   - 不要发布
-theme: field-manual
+channel_theme: emerald-editorial
+article_type: analysis
 author: K Teach
 summary: 从任务所在的队列出发，建立可复用的事件循环判断方法。
 cover:
@@ -216,10 +217,9 @@ authorized_for_publication: false
 `,
   );
 
-  const result = await runCli(
-    ["wechat", "render", "--brief", "event-loop-public"],
-    workspace,
-  );
+  const command = ["generate", "--intent", "wechat", "--brief", "event-loop-public", "--json"];
+  assert.equal((await runCli(command, workspace)).exitCode, 0);
+  const result = await runCli(command, workspace);
 
   assert.equal(result.exitCode, 0, result.stderr);
   const output = path.join(
@@ -262,6 +262,10 @@ authorized_for_publication: false
   assert.doesNotMatch(article, /<script|<style|<div|class=|id=/i);
   assert.doesNotMatch(article, /127\.0\.0\.1|localhost|lessons\/event-loop-01/);
   assert.match(preview, /复制正文/);
+  assert.match(preview, /dataset\.copyState="success"/);
+  assert.match(preview, /writeText\(text\)/);
+  assert.match(preview, /execCommand\("copy"\)/);
+  assert.match(preview, /复制失败/);
   assert.match(preview, /src="media\/request-flow\.png"/);
   assert.match(preview, /<script/);
   assert.ok((await stat(path.join(output, "media", "request-flow.png"))).size > 0);
@@ -271,7 +275,7 @@ authorized_for_publication: false
   assert.equal(manifest.validation.eligible_for_draft, true);
   assert.equal(manifest.schema_version, 2);
   assert.equal(manifest.channel_theme, "emerald-editorial");
-  assert.equal(manifest.article_type, "tutorial");
+  assert.equal(manifest.article_type, "analysis");
   assert.equal(manifest.eligible_for_draft, true);
   assert.equal(manifest.eligible_for_publication, false);
   assert.ok(manifest.capabilities_used.includes("visual-provider"));

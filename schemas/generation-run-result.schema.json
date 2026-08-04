@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/generation-run-result.schema.json",
+  "title": "Generation Run Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "state", "intent", "input_hash", "next_action", "refs", "warnings"],
+  "properties": {
+    "schema_version": { "const": 1 }, "run_id": { "type": "string", "minLength": 1 },
+    "state": { "enum": ["needs_input", "needs_plan", "complete", "attention_required", "failed"] },
+    "intent": { "enum": ["learn", "ppt", "wechat"] }, "input_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "next_action": { "type": "object", "additionalProperties": false, "required": ["code", "fields"], "properties": {
+      "code": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+      "fields": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    } },
+    "refs": { "type": "object", "additionalProperties": false, "required": ["context_packet", "route_brief", "plan", "artifact", "publication_attempt"], "properties": {
+      "context_packet": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+      "route_brief": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+      "plan": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+      "artifact": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+      "publication_attempt": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] }
+    } },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "error": { "type": "object", "additionalProperties": false, "required": ["code", "fields", "refs"], "properties": {
+      "code": { "type": "string", "minLength": 1 },
+      "fields": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+      "refs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    } }
+  }
+}

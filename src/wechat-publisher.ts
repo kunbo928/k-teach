@@ -3,6 +3,7 @@ import {
   chmod,
   mkdir,
   readFile,
+  readdir,
   rename,
   writeFile,
 } from "node:fs/promises";
@@ -12,10 +13,6 @@ import { createInterface } from "node:readline/promises";
 import type { PublicationAttempt, PublicationState } from "./domain.ts";
 import { KTeachError, type ErrorCode } from "./errors.ts";
 import { validateDocument } from "./schema.ts";
-import {
-  migratePublicationAttempt,
-  migrateWechatArtifactManifest,
-} from "./contract-migrations.ts";
 import { userCacheDir } from "./user-paths.ts";
 
 const OFFICIAL_API_BASE_URL = "https://api.weixin.qq.com";
@@ -23,6 +20,14 @@ const OFFICIAL_API_BASE_URL = "https://api.weixin.qq.com";
 interface Credentials {
   appId: string;
   appSecret: string;
+}
+
+export class WechatDraftAttentionRequired extends Error {
+  readonly attemptId: string;
+  constructor(attemptId: string) {
+    super("WeChat draft state requires inspection.");
+    this.attemptId = attemptId;
+  }
 }
 
 export interface WechatPublisherOptions {
@@ -130,8 +135,10 @@ async function saveAttempt(
 
 async function loadAttempt(cwd: string, id: string): Promise<StoredAttempt> {
   try {
-    const value = JSON.parse(await readFile(attemptPath(cwd, id), "utf8")) as Record<string, unknown>;
-    return migratePublicationAttempt(value) as unknown as StoredAttempt;
+    const value = JSON.parse(await readFile(attemptPath(cwd, id), "utf8")) as StoredAttempt;
+    const errors = await validateDocument("publication-attempt", value);
+    if (errors.length) throw new KTeachError("validation-failed", "Publication Attempt uses an unsupported contract.", "Inspect it as historical data; create a current Generation Run for new delivery.");
+    return value;
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
       throw new KTeachError(
@@ -340,14 +347,14 @@ export async function createWechatDraft(
   const manifestValue = JSON.parse(
     await readFile(path.join(artifactDir, "manifest.json"), "utf8"),
   ) as Record<string, unknown>;
-  const manifest = migrateWechatArtifactManifest(
-    manifestValue,
-  ) as unknown as WechatArtifact;
+  const manifestErrors = await validateDocument("wechat-artifact-manifest", manifestValue);
+  if (manifestErrors.length) throw new KTeachError("validation-failed", "WeChat artifact uses an unsupported contract.", "Regenerate it through the current Generation Run.");
+  const manifest = manifestValue as unknown as WechatArtifact;
   if (!manifest.validation?.eligible_for_draft) {
     throw new KTeachError(
       "validation-failed",
       "The rendered WeChat artifact is not eligible for a draft.",
-      "Run k-teach wechat render and resolve every validation error and warning.",
+      "Run the current WeChat Generation Run and resolve every validation error and warning.",
     );
   }
   const attempt: StoredAttempt = {
@@ -457,6 +464,42 @@ export async function createWechatDraft(
     await saveAttempt(options.cwd, attempt);
     return attempt;
   });
+}
+
+async function attemptsForArtifact(cwd: string, artifactId: string, accountAlias: string): Promise<StoredAttempt[]> {
+  const files = await readdir(attemptsDir(cwd)).catch(() => []);
+  const attempts: StoredAttempt[] = [];
+  for (const file of files.filter((name) => name.endsWith(".json")).sort()) {
+    try {
+      const value = JSON.parse(await readFile(path.join(attemptsDir(cwd), file), "utf8")) as StoredAttempt;
+      if ((await validateDocument("publication-attempt", value)).length) continue;
+      if (value.artifact_id === artifactId && value.account_alias === accountAlias) attempts.push(value);
+    } catch { /* malformed attempts are ignored for artifact reuse */ }
+  }
+  return attempts;
+}
+
+export async function createOrReuseAuthorizedWechatDraft(artifactDir: string, options: WechatPublisherOptions): Promise<PublicationAttempt> {
+  const manifestValue = JSON.parse(await readFile(path.join(artifactDir, "manifest.json"), "utf8")) as Record<string, unknown>;
+  if ((await validateDocument("wechat-artifact-manifest", manifestValue)).length) throw new KTeachError("validation-failed", "WeChat artifact uses an unsupported contract.", "Regenerate it through the current Generation Run.");
+  const manifest = manifestValue as unknown as WechatArtifact;
+  if (manifest.publication_brief.draft_delivery?.authorized !== true || manifest.publication_brief.draft_delivery.account_alias !== options.accountAlias) {
+    throw new KTeachError("validation-failed", "The current Publication Brief does not authorize this account-scoped draft.", "Set matching draft_delivery authorization or generate locally without --draft.");
+  }
+  const prior = await attemptsForArtifact(options.cwd, manifest.id, options.accountAlias);
+  const successful = prior.find((attempt) => attempt.state === "draft_created");
+  if (successful) return successful;
+  const uncertain = prior.find((attempt) => attempt.state === "unknown" || attempt.current_operation !== "none");
+  if (uncertain) throw new WechatDraftAttentionRequired(uncertain.id);
+  try {
+    return await createWechatDraft(artifactDir, options);
+  } catch (error) {
+    if (error instanceof KTeachError && error.code === "remote-unknown") {
+      const saved = (await attemptsForArtifact(options.cwd, manifest.id, options.accountAlias)).find((attempt) => attempt.state === "unknown");
+      if (saved) throw new WechatDraftAttentionRequired(saved.id);
+    }
+    throw error;
+  }
 }
 
 export async function previewWechatDraft(

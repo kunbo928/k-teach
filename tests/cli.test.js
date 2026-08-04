@@ -213,7 +213,7 @@ test("capabilities reports deterministic core and optional boundaries", async ()
 
   assert.equal(result.exitCode, 0);
   assert.deepEqual(JSON.parse(result.stdout), {
-    core: ["lesson-bundle", "web", "diagram", "presentation-brief", "ppt", "vite-project-preview"],
+    core: ["lesson-bundle", "context-packet", "semantic-plan", "generation-run", "content-addressed-cache", "web", "diagram", "presentation-brief", "ppt", "vite-project-preview"],
     optional: ["visual-provider", "wechat", "wechat-channel-themes", "wechat-multi-account"],
     visual_modes: ["auto", "required", "off"],
     teaching_themes: [

@@ -14,10 +14,6 @@ import test from "node:test";
 
 const execFileAsync = promisify(execFile);
 const cliPath = path.resolve("bin/k-teach.js");
-const packageVersion = JSON.parse(
-  await readFile(path.resolve("package.json"), "utf8"),
-).version;
-
 async function runCli(args, cwd, env = process.env) {
   try {
     const result = await execFileAsync(process.execPath, [cliPath, ...args], {
@@ -54,8 +50,8 @@ test("init creates the Learning Project, initial Teach, and selected Agent Integ
     path.join(project, ".codex", "skills", "k-teach", "SKILL.md"),
     "utf8",
   );
-  assert.ok(skill.includes(`generatedBy: "${packageVersion}"`));
-  assert.match(skill, /\bk-teach validate\b/);
+  assert.equal(skill, await readFile(path.resolve("SKILL.md"), "utf8"));
+  assert.match(skill, /k-teach generate --intent/);
   assert.doesNotMatch(skill, /node bin\/k-teach\.js/);
 });
 
@@ -91,11 +87,7 @@ test("update repairs owned files and preserves the Learning Project and other Sk
   assert.equal(result.exitCode, 0);
   assert.equal(await readFile(configPath, "utf8"), customConfig);
   assert.equal(await readFile(otherSkill, "utf8"), "USER OWNED\n");
-  assert.ok(
-    (await readFile(skillPath, "utf8")).includes(
-      `generatedBy: "${packageVersion}"`,
-    ),
-  );
+  assert.equal(await readFile(skillPath, "utf8"), await readFile(path.resolve("SKILL.md"), "utf8"));
 
   const repeated = await runCli(["init", "--tools", "codex"], project);
   assert.equal(repeated.exitCode, 0);

@@ -1,0 +1,36 @@
+{
+  "provider": "REPLACE_PROVIDER",
+  "model": "REPLACE_MODEL_ID",
+  "model_snapshot": "REPLACE_MODEL_SNAPSHOT",
+  "agent_version": "REPLACE_AGENT_VERSION",
+  "command_version": "0.6.0",
+  "generated_integration_hash": "REPLACE_SHA256",
+  "repetitions": 3,
+  "reasoning_effort": "REPLACE_REASONING_EFFORT",
+  "sampling": { "temperature": 0 },
+  "prompt_hashes": {
+    "system": "REPLACE_SHA256",
+    "developer": "REPLACE_SHA256",
+    "user": "REPLACE_SHA256"
+  },
+  "tool_definitions_hash": "REPLACE_SHA256",
+  "permissions_hash": "REPLACE_SHA256",
+  "fixture_hash": "REPLACE_SHA256",
+  "environment_hash": "REPLACE_SHA256",
+  "prompt_caching": { "enabled": false },
+  "packages": {
+    "baseline": { "root": "/absolute/baseline/package", "name": "k-teach", "version": "0.6.0", "expected_root_hash": "REPLACE_SHA256" },
+    "candidate": { "root": "/absolute/candidate/package", "name": "k-teach", "version": "0.6.0", "expected_root_hash": "REPLACE_SHA256" }
+  },
+  "scenarios": [
+    { "id": "learn-cold", "route": "learn", "phase": "cold" },
+    { "id": "learn-warm", "route": "learn", "phase": "warm" },
+    { "id": "learn-delta", "route": "learn", "phase": "delta" },
+    { "id": "ppt-cold", "route": "ppt", "phase": "cold" },
+    { "id": "ppt-warm", "route": "ppt", "phase": "warm" },
+    { "id": "ppt-delta", "route": "ppt", "phase": "delta" },
+    { "id": "wechat-cold", "route": "wechat", "phase": "cold" },
+    { "id": "wechat-warm", "route": "wechat", "phase": "warm" },
+    { "id": "wechat-delta", "route": "wechat", "phase": "delta" }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "tokenizers": {
+    "comparison": "gpt-tokenizer 3.4.0 model/gpt-4 (cl100k_base compatible)",
+    "current": "gpt-tokenizer 3.4.0 model/gpt-5"
+  },
+  "fixtures": {
+    "ordinary_complete": { "schema_version": 1, "run_id": "run-a", "state": "complete", "intent": "wechat", "input_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "next_action": { "code": null, "fields": [] }, "refs": { "context_packet": "ctx-a", "route_brief": "brief-a", "plan": "plan-a", "artifact": "wechat-a", "publication_attempt": null }, "warnings": [] },
+    "ordinary_warm": { "schema_version": 1, "run_id": "run-a", "state": "complete", "intent": "wechat", "input_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "next_action": { "code": null, "fields": [] }, "refs": { "context_packet": "ctx-a", "route_brief": "brief-a", "plan": "plan-a", "artifact": "wechat-a", "publication_attempt": null }, "warnings": [] },
+    "semantic_delta": { "schema_version": 1, "run_id": "run-b", "state": "needs_plan", "intent": "wechat", "input_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "next_action": { "code": "review-stale-plan", "fields": [] }, "refs": { "context_packet": "ctx-b", "route_brief": "brief-a", "plan": "plan-a", "artifact": null, "publication_attempt": null }, "warnings": ["plan-review-required"] },
+    "structured_error": { "schema_version": 1, "run_id": "run-c", "state": "failed", "intent": "wechat", "input_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "next_action": { "code": "inspect-error", "fields": [] }, "refs": { "context_packet": null, "route_brief": null, "plan": null, "artifact": null, "publication_attempt": null }, "warnings": [], "error": { "code": "invalid-brief", "fields": [], "refs": [] } }
+  }
+}

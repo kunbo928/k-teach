@@ -31,6 +31,16 @@ import { fileURLToPath } from "node:url";
 
 
 
+
+
+
+
+
+
+
+
+
+
 async function loadSchema(name            )                      {
   const url = new URL(`../schemas/${name}.schema.json`, import.meta.url);
   return JSON.parse(await readFile(fileURLToPath(url), "utf8"))              ;
@@ -42,6 +52,19 @@ function validateValue(
   path        ,
 )           {
   const errors           = [];
+  if (schema.oneOf) {
+    const candidates = schema.oneOf.map((candidate) =>
+      validateValue(candidate, value, path),
+    );
+    const valid = candidates.filter((candidate) => candidate.length === 0);
+    if (valid.length === 1) return [];
+    return [
+      valid.length === 0
+        ? `${path}must match one allowed shape`
+        : `${path}matches multiple incompatible shapes`,
+      ...(valid.length === 0 ? candidates.flat() : []),
+    ];
+  }
   if (schema.const !== undefined && value !== schema.const) {
     errors.push(`${path}must equal ${JSON.stringify(schema.const)}`);
     return errors;
@@ -54,12 +77,23 @@ function validateValue(
     if (typeof value !== "string") errors.push(`${path}must be a string`);
     else if (schema.minLength && value.length < schema.minLength)
       errors.push(`${path}must not be empty`);
+    else if (schema.maxLength && value.length > schema.maxLength)
+      errors.push(`${path}must contain at most ${schema.maxLength} character(s)`);
+    else if (schema.pattern && !new RegExp(schema.pattern).test(value))
+      errors.push(`${path}must match ${schema.pattern}`);
     return errors;
   }
+  if (schema.type === "null")
+    return value === null ? [] : [`${path}must be null`];
   if (schema.type === "boolean" && typeof value !== "boolean")
     return [`${path}must be a boolean`];
-  if (schema.type === "number" && typeof value !== "number")
-    return [`${path}must be a number`];
+  if (schema.type === "number" || schema.type === "integer") {
+    if (typeof value !== "number" || (schema.type === "integer" && !Number.isInteger(value)))
+      return [`${path}must be ${schema.type === "integer" ? "an integer" : "a number"}`];
+    if (schema.minimum !== undefined && value < schema.minimum)
+      return [`${path}must be at least ${schema.minimum}`];
+    return [];
+  }
   if (schema.type === "array") {
     if (!Array.isArray(value)) return [`${path}must be an array`];
     if (schema.minItems && value.length < schema.minItems)
@@ -104,23 +138,7 @@ export async function validateDocument(
   name            ,
   value         ,
 )                    {
-  let candidate = value;
-  if (
-    name === "publication-brief" &&
-    value &&
-    typeof value === "object" &&
-    (value                                ).schema_version === 1
-  ) {
-    const legacy = value                           ;
-    const { theme: _theme, ...rest } = legacy;
-    candidate = {
-      ...rest,
-      schema_version: 2,
-      channel_theme: "emerald-editorial",
-      article_type: "tutorial",
-    };
-  }
-  return validateValue(await loadSchema(name), candidate, "");
+  return validateValue(await loadSchema(name), value, "");
 }
 
 

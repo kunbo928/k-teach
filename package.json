@@ -26,6 +26,9 @@
     "pretest": "npm run build",
     "release": "npm run build && changeset publish",
     "test": "node --test tests/*.test.js",
+    "test:tokens": "node scripts/verify-token-budgets.mjs",
+    "benchmark:package-hash": "node scripts/hash-benchmark-package.mjs",
+    "verify:release-evidence": "node scripts/verify-release-evidence.mjs",
     "typecheck": "tsc --noEmit",
     "version": "changeset version"
   },
@@ -56,6 +59,7 @@
     "@changesets/cli": "2.31.1",
     "@types/katex": "^0.16.8",
     "@types/node": "^26.1.1",
+    "gpt-tokenizer": "3.4.0",
     "typescript": "^7.0.2"
   }
 }

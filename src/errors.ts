@@ -6,6 +6,7 @@ export const ERROR_CODES = [
   "missing-capability",
   "render-failed",
   "validation-failed",
+  "migration-required",
   "credential-missing",
   "account-ineligible",
   "ip-not-allowlisted",

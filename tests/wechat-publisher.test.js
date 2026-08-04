@@ -8,12 +8,14 @@ import test from "node:test";
 import {
   confirmInteractivePublish,
   createWechatDraft,
+  createOrReuseAuthorizedWechatDraft,
   doctorWechat,
   previewWechatDraft,
   publishWechatDraft,
   queryWechatStatus,
   resolveWechatCredentials,
   stateForWechatPublishStatus,
+  WechatDraftAttentionRequired,
 } from "../src/wechat-publisher.ts";
 import { KTeachError } from "../src/errors.ts";
 import { validateDocument } from "../src/schema.ts";
@@ -40,6 +42,12 @@ async function fixture() {
     JSON.stringify({
       schema_version: 2,
       id: "wechat-public-lesson",
+      kind: "wechat-article",
+      channel: "wechat",
+      generator: "k-teach-wechat-v2",
+      generated_at: "brief-r1",
+      lesson: { id: "lesson", revision: "lesson-r1" },
+      design_profile: { id: "classic-manual", revision: "1" },
       artifact_revision: "artifact-r1",
       publication_brief: {
         id: "public-lesson",
@@ -48,17 +56,24 @@ async function fixture() {
         authorized_for_publication: true,
       },
       article: { title: "公开课", author: "K Teach", digest: "摘要" },
+      channel_theme: "emerald-editorial",
+      article_type: "analysis",
+      input_hash: "input-hash",
+      input_sources: ["lessons/lesson/lesson.yaml", "lessons/lesson/lesson.md", "publications/public-lesson.yaml"],
       files: ["article.html", "cover/cover.jpg", "media/diagram.png"],
       media: [
-        { kind: "cover", file: "cover/cover.jpg", content_hash: "cover-hash" },
+        { kind: "cover", source: "fixture", file: "cover/cover.jpg", content_hash: "cover-hash" },
         {
           kind: "diagram",
+          source: "fixture",
           placeholder: "KT_WECHAT_MEDIA_001",
           file: "media/diagram.png",
           content_hash: "media-hash",
         },
       ],
-      validation: { eligible_for_draft: true },
+      capabilities_used: ["wechat-renderer"],
+      warnings: [],
+      validation: { errors: [], warnings: [], eligible_for_draft: true },
       eligible_for_draft: true,
       eligible_for_publication: true,
     }),
@@ -236,6 +251,44 @@ test("publisher maps platform rejection and preserves unknown writes without rep
     names.map(async (name) => JSON.parse(await readFile(path.join(attemptsDir, name), "utf8"))),
   );
   assert.ok(attempts.some((attempt) => attempt.state === "unknown"));
+});
+
+test("authorized draft orchestration reuses success and blocks uncertain replay", async () => {
+  const { workspace, artifactDir } = await fixture();
+  let draftCalls = 0;
+  const mock = await withMockWechat((url) => {
+    if (url === "/cgi-bin/stable_token") return { access_token: "token", expires_in: 7200 };
+    if (url.startsWith("/cgi-bin/media/uploadimg")) return { url: "https://mmbiz.qpic.cn/body.png" };
+    if (url.startsWith("/cgi-bin/material/add_material")) return { media_id: "cover-id" };
+    if (url.startsWith("/cgi-bin/draft/add")) { draftCalls += 1; return { media_id: "draft-id" }; }
+    return {};
+  });
+  const options = { cwd: workspace, accountAlias: "main", credentials: { appId: "app", appSecret: "secret" }, apiBaseUrl: mock.baseUrl, cacheDir: path.join(workspace, "cache") };
+  try {
+    const first = await createOrReuseAuthorizedWechatDraft(artifactDir, options);
+    const second = await createOrReuseAuthorizedWechatDraft(artifactDir, options);
+    assert.equal(second.id, first.id);
+    assert.equal(draftCalls, 1);
+  } finally { await mock.close(); }
+
+  const { workspace: unknownWorkspace, artifactDir: unknownArtifact } = await fixture();
+  const unknown = { ...options, cwd: unknownWorkspace, apiBaseUrl: "http://127.0.0.1:1", cacheDir: path.join(unknownWorkspace, "cache") };
+  await assert.rejects(() => createOrReuseAuthorizedWechatDraft(unknownArtifact, unknown), (error) => error instanceof WechatDraftAttentionRequired);
+  await assert.rejects(() => createOrReuseAuthorizedWechatDraft(unknownArtifact, unknown), (error) => error instanceof WechatDraftAttentionRequired);
+});
+
+test("draft orchestration rejects mismatched authorization before remote access", async () => {
+  const { workspace, artifactDir } = await fixture();
+  const manifestPath = path.join(artifactDir, "manifest.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  manifest.publication_brief.draft_delivery.account_alias = "other";
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  let calls = 0;
+  const mock = await withMockWechat(() => { calls += 1; return {}; });
+  try {
+    await assert.rejects(() => createOrReuseAuthorizedWechatDraft(artifactDir, { cwd: workspace, accountAlias: "main", credentials: { appId: "app", appSecret: "secret" }, apiBaseUrl: mock.baseUrl }), /does not authorize/);
+    assert.equal(calls, 0);
+  } finally { await mock.close(); }
 });
 
 test("doctor is read-only, reports capability uncertainty, and maps rate limits", async () => {

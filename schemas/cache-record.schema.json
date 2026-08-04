@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k-teach.local/schemas/cache-record.schema.json",
+  "title": "Content-addressed Cache Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "input_hash", "output_hash", "version", "refs"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "enum": ["context", "plan", "media", "artifact", "generation-run"] },
+    "input_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "output_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "version": { "type": "string", "minLength": 1 },
+    "refs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

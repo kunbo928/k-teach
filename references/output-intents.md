@@ -23,7 +23,7 @@ Preserve the existing K Teach behavior:
 - build or revise the source-grounded Lesson Bundle;
 - keep exercises and feedback inline at their teaching moments;
 - use the Field Manual Web profile and the lesson's composition mode;
-- render with `k-teach render web`;
+- generate with `k-teach generate --intent learn --lesson <lesson-id> --json`;
 - record demonstrated learning only from actual learner evidence.
 
 Do not invoke a channel-layout Skill for this route.
@@ -38,14 +38,10 @@ Treat the article as a public derivative, not as the lesson itself.
    then summarize once that the workflow will create a remote draft. When the
    user approves that outcome, record `draft_delivery.account_alias` and
    `draft_delivery.authorized: true` in the Publication Brief. Run `k-teach
-   wechat render --brief <brief-id>` with the default `emerald-editorial`
-   Channel Theme, validate the artifact, and create the draft without asking
-   again between deterministic commands. If the user explicitly requests theme preview, run
-   `k-teach wechat render-proposals --brief <brief-id>` first, then immediately
-   run `k-teach preview --open` from the Learning Project root and keep the Vite
-   process alive. Return the actual printed HTTP URL because occupied ports are
-   avoided automatically. If the user says
-   local-only, stop after rendering.
+   generate --intent wechat --brief <brief-id> --draft --json`; the Generation
+   Run owns local validation and idempotent draft delivery. Use narrow proposal
+   and preview diagnostics only for an explicit theme comparison. If the user
+   says local-only, omit `--draft`.
    only selected Lesson Bundle content, preserves facts and citations, and
    omits exercises, answers, progress, private notes, and implicit local links.
 3. Deliver `article.html`, copy-enabled `preview.html`, the cover, prepared
@@ -67,7 +63,8 @@ artifact is a static HTML slide deck, not a binary `.pptx`.
 1. If the user only says PPT, clarify `teaching` (课堂教学) versus `talk`
    (讲座分享), then confirm audience, duration, and selected chapters only when
    missing.
-2. Create a Presentation Brief and run `k-teach render ppt --brief <id>`.
+2. Create a Presentation Brief and run
+   `k-teach generate --intent ppt --brief <id> --json`.
    Teaching uses a multi-slide learning sequence and may include practice;
    talk uses a narrative spine and omits learning exercises by default.
 3. Preserve facts, sources, and teaching objectives. Keep answer keys and

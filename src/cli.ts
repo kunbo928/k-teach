@@ -2,6 +2,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { access, readFile, readdir } from "node:fs/promises";
 import { stdin, stdout } from "node:process";
+import { parse } from "yaml";
 
 import { KTeachError } from "./errors.ts";
 import { resolveConfig } from "./config.ts";
@@ -11,10 +12,11 @@ import { renderWeb } from "./web-renderer.ts";
 import { renderDiagram } from "./diagram-renderer.ts";
 import { registerVisualAsset } from "./visuals.ts";
 import { renderWechat, renderWechatProposals } from "./wechat-renderer.ts";
-import { renderPpt, renderPptFromBrief } from "./ppt-renderer.ts";
+import { renderPptFromBrief } from "./ppt-renderer.ts";
 import {
   confirmInteractivePublish,
   createWechatDraft,
+  createOrReuseAuthorizedWechatDraft,
   doctorWechat,
   previewWechatDraft,
   publishWechatDraft,
@@ -22,6 +24,7 @@ import {
   readWechatAttempt,
   resolveWechatCredentials,
   type WechatPublisherOptions,
+  WechatDraftAttentionRequired,
 } from "./wechat-publisher.ts";
 import {
   assertWorkspaceIsCurrent,
@@ -43,6 +46,16 @@ import { searchableMultiSelect } from "./searchable-multi-select.ts";
 import { TEACHING_THEME_IDS } from "./teaching-themes.ts";
 import { addWechatAccount, markWechatAccountSuccessful, maskedAppId, readWechatAccounts, requireWechatAccount } from "./wechat-accounts.ts";
 import { userConfigDir } from "./user-paths.ts";
+import { createContextPacket } from "./context-packet.ts";
+import { GenerationAttentionRequired, runGeneration } from "./generation-run.ts";
+import { stageAndPromoteArtifact } from "./artifact-pipeline.ts";
+import { loadSemanticPlan } from "./semantic-plan.ts";
+
+async function validateStagedArtifact(output: string, manifestName: string): Promise<void> {
+  const manifest = JSON.parse(await readFile(path.join(output, manifestName), "utf8")) as { id?: string; files?: string[] };
+  if (!manifest.id || !Array.isArray(manifest.files)) throw new KTeachError("render-failed", "Artifact manifest is incomplete.", "Correct the route renderer contract.");
+  for (const file of manifest.files) await access(path.join(output, file));
+}
 
 export const CLI_VERSION = "__K_TEACH_PACKAGE_VERSION__";
 
@@ -77,7 +90,7 @@ async function chooseTools(
 }
 
 const CAPABILITIES = {
-  core: ["lesson-bundle", "web", "diagram", "presentation-brief", "ppt", "vite-project-preview"],
+  core: ["lesson-bundle", "context-packet", "semantic-plan", "generation-run", "content-addressed-cache", "web", "diagram", "presentation-brief", "ppt", "vite-project-preview"],
   optional: ["visual-provider", "wechat", "wechat-channel-themes", "wechat-multi-account"],
   visual_modes: ["auto", "required", "off"],
   teaching_themes: TEACHING_THEME_IDS,
@@ -300,6 +313,101 @@ export async function main(args: string[]): Promise<number> {
       process.stdout.write("Teach is valid.\n");
       return 0;
     }
+    if (command === "context") {
+      const intent = option(args, "--intent");
+      const lessonId = option(args, "--lesson");
+      if (intent !== "learn" && intent !== "ppt" && intent !== "wechat") {
+        throw new KTeachError("validation-failed", "--intent must be learn, ppt, or wechat.", "Pass a supported output intent.");
+      }
+      if (!lessonId) throw new KTeachError("validation-failed", "--lesson is required.", "Pass --lesson <id>.");
+      if (!args.includes("--json")) throw new KTeachError("validation-failed", "context requires --json.", "Add --json for a stable machine-readable result.");
+      const workspaceRoot = await resolveTeach(args);
+      await assertWorkspaceIsCurrent(workspaceRoot);
+      process.stdout.write(`${JSON.stringify(await createContextPacket(workspaceRoot, intent, lessonId, option(args, "--brief")))}\n`);
+      return 0;
+    }
+    if (command === "inspect" || command === "explain") {
+      const runId = option(args, "--run");
+      if (!runId || !/^run-[a-f0-9]+$/.test(runId)) throw new KTeachError("validation-failed", "A valid --run id is required.", "Pass the run ref returned by generate.");
+      const workspaceRoot = await resolveTeach(args);
+      const value = JSON.parse(await readFile(path.join(workspaceRoot, ".k-teach", "runs", `${runId}.json`), "utf8")) as { state: string; next_action: { code: string | null }; error?: { code: string } };
+      if (command === "inspect" && args.includes("--json")) process.stdout.write(`${JSON.stringify(value)}\n`);
+      else process.stdout.write(`Run ${runId}\nState: ${value.state}\nAction: ${value.next_action.code ?? "none"}${value.error ? `\nError: ${value.error.code}` : ""}\n`);
+      return 0;
+    }
+    if (command === "generate") {
+      const intent = option(args, "--intent");
+      if (intent !== "learn" && intent !== "ppt" && intent !== "wechat") {
+        throw new KTeachError("validation-failed", "--intent must be learn, ppt, or wechat.", "Pass a supported output intent.");
+      }
+      const workspaceRoot = await resolveTeach(args);
+      await assertWorkspaceIsCurrent(workspaceRoot);
+      const briefId = option(args, "--brief");
+      const draftRequested = args.includes("--draft");
+      let lessonId = option(args, "--lesson");
+      const configRoot = await resolveProjectConfigRoot(workspaceRoot);
+      const config = await resolveConfig({ cwd: configRoot, userConfigDir: userConfigDir() });
+      const value = await runGeneration({
+        root: workspaceRoot,
+        intent,
+        lessonId,
+        briefId,
+        version: CLI_VERSION,
+        deliveryMode: draftRequested ? "draft" : undefined,
+        createContext: async () => {
+          if (draftRequested && intent !== "wechat") throw new KTeachError("validation-failed", "--draft is supported only for the WeChat intent.", "Remove --draft or use --intent wechat.");
+          if (intent !== "learn" && briefId) {
+            const directory = intent === "ppt" ? "presentations" : "publications";
+            const brief = parse(await readFile(path.join(workspaceRoot, directory, `${briefId}.yaml`), "utf8")) as { lesson_id?: string };
+            lessonId = brief.lesson_id;
+          }
+          return createContextPacket(workspaceRoot, intent, lessonId!, briefId);
+        },
+        render: async (packet, plan) => {
+          if (intent === "learn") {
+            const output = await stageAndPromoteArtifact({
+              root: workspaceRoot, outputDirectory: config.output_dir, relativeArtifact: "web",
+              render: (staging) => renderWeb(workspaceRoot, staging, { lessonId }),
+              validate: (staged) => validateStagedArtifact(staged, "artifact-manifest.json"),
+            });
+            const manifest = JSON.parse(await readFile(path.join(output, "artifact-manifest.json"), "utf8")) as { id: string };
+            return manifest.id;
+          }
+          if (intent === "ppt") {
+            if (!plan || plan.kind !== "slide") throw new KTeachError("validation-failed", "A current Slide Plan is required.", "Review the generated Plan and rerun.");
+            const output = await stageAndPromoteArtifact({
+              root: workspaceRoot, outputDirectory: config.output_dir, relativeArtifact: path.join("ppt", briefId!),
+              render: (staging) => renderPptFromBrief(workspaceRoot, briefId!, staging, plan, packet),
+              validate: (staged) => validateStagedArtifact(staged, "manifest.json"),
+            });
+            return (JSON.parse(await readFile(path.join(output, "manifest.json"), "utf8")) as { id: string }).id;
+          }
+          if (!plan || plan.kind !== "article") throw new KTeachError("validation-failed", "A current Article Plan is required.", "Review the generated Plan and rerun.");
+          const output = await stageAndPromoteArtifact({
+            root: workspaceRoot, outputDirectory: config.output_dir, relativeArtifact: path.join("wechat", briefId!),
+            render: (staging) => renderWechat(workspaceRoot, briefId!, staging, { plan, packet }),
+            validate: (staged) => validateStagedArtifact(staged, "manifest.json"),
+          });
+          return (JSON.parse(await readFile(path.join(output, "manifest.json"), "utf8")) as { id: string }).id;
+        },
+        deliver: draftRequested ? async () => {
+          const artifactDir = path.resolve(workspaceRoot, config.output_dir, "wechat", briefId!);
+          const manifest = JSON.parse(await readFile(path.join(artifactDir, "manifest.json"), "utf8")) as { publication_brief?: { draft_delivery?: { account_alias?: string; authorized?: boolean } } };
+          const authorization = manifest.publication_brief?.draft_delivery;
+          if (authorization?.authorized !== true || !authorization.account_alias) throw new KTeachError("validation-failed", "The current Publication Brief has no account-scoped draft authorization.", "Add draft_delivery authorization or omit --draft.");
+          try {
+            const attempt = await createOrReuseAuthorizedWechatDraft(artifactDir, await publisherOptions(workspaceRoot, authorization.account_alias));
+            await markWechatAccountSuccessful(authorization.account_alias);
+            return attempt.id;
+          } catch (error) {
+            if (error instanceof WechatDraftAttentionRequired) throw new GenerationAttentionRequired(error.attemptId);
+            throw error;
+          }
+        } : undefined,
+      });
+      process.stdout.write(args.includes("--json") ? `${JSON.stringify(value)}\n` : `${value.state}: ${value.run_id}\n`);
+      return value.state === "failed" || value.state === "attention_required" ? 2 : 0;
+    }
     if (command === "render" && args[1] === "web") {
       const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
@@ -316,23 +424,26 @@ export async function main(args: string[]): Promise<number> {
       command === "render" &&
       (args[1] === "ppt" || args[1] === "presentation")
     ) {
-      const lesson = option(args, "--lesson");
       const brief = option(args, "--brief");
-      if (!lesson && !brief) {
+      if (option(args, "--lesson") || option(args, "--theme")) {
+        throw new KTeachError("migration-required", "PPT --lesson/--theme input is no longer supported.", "Run generate --intent ppt --brief <id> --json.");
+      }
+      if (!brief) {
         throw new KTeachError(
           "validation-failed",
-          "--brief is required for Presentation Brief rendering (legacy --lesson remains supported).",
-          "Run k-teach render ppt --brief <presentation-brief-id>.",
+          "--brief is required for current PPT rendering.",
+          "Run generate --intent ppt --brief <id> --json first.",
         );
       }
       const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const config = await resolveConfig({ cwd: configRoot, userConfigDir: userConfigDir() });
-      const output = brief
-        ? await renderPptFromBrief(workspaceRoot, brief, config.output_dir)
-        : await renderPpt(workspaceRoot, lesson as string, config.output_dir, option(args, "--theme"));
-      if (!brief) process.stderr.write("Migration notice: --lesson/--theme is a compatibility path; create a Presentation Brief and use --brief.\n");
+      const briefValue = parse(await readFile(path.join(workspaceRoot, "presentations", `${brief}.yaml`), "utf8")) as { lesson_id: string };
+      const packet = await createContextPacket(workspaceRoot, "ppt", briefValue.lesson_id, brief);
+      const plan = await loadSemanticPlan(workspaceRoot, "slide", brief);
+      if (!plan || plan.kind !== "slide") throw new KTeachError("validation-failed", "No current Slide Plan exists for this Brief.", "Run generate --intent ppt --brief <id> --json and review the scaffold.");
+      const output = await renderPptFromBrief(workspaceRoot, brief, config.output_dir, plan, packet);
       process.stdout.write(`HTML PPT rendered to ${output}\n`);
       return 0;
     }
@@ -389,16 +500,20 @@ export async function main(args: string[]): Promise<number> {
         throw new KTeachError(
           "invalid-brief",
           "--brief is required.",
-          "Run k-teach wechat render --brief <id>.",
+          "Run generate --intent wechat --brief <id> --json first.",
         );
       }
       const config = await resolveConfig({
         cwd: configRoot,
         userConfigDir: userConfigDir(),
       });
+      const briefValue = parse(await readFile(path.join(workspaceRoot, "publications", `${brief}.yaml`), "utf8")) as { lesson_id: string };
+      const packet = await createContextPacket(workspaceRoot, "wechat", briefValue.lesson_id, brief);
+      const plan = await loadSemanticPlan(workspaceRoot, "article", brief);
+      if (!plan || plan.kind !== "article") throw new KTeachError("validation-failed", "No current Article Plan exists for this Brief.", "Run generate --intent wechat --brief <id> --json and review the scaffold.");
       const output = args[1] === "render-proposals"
-        ? await renderWechatProposals(workspaceRoot, brief, config.output_dir)
-        : await renderWechat(workspaceRoot, brief, config.output_dir);
+        ? await renderWechatProposals(workspaceRoot, brief, config.output_dir, plan, packet)
+        : await renderWechat(workspaceRoot, brief, config.output_dir, { plan, packet });
       process.stdout.write(`WeChat ${args[1] === "render-proposals" ? "theme proposals" : "article"} rendered to ${output}\n`);
       return 0;
     }
@@ -540,12 +655,20 @@ export async function main(args: string[]): Promise<number> {
           for (const teach of affected) {
             await renderWeb(teach.root, config.output_dir);
             const presentationIds = await readdir(path.join(teach.root, "presentations")).then((files) => files.filter((name) => name.endsWith(".yaml")).map((name) => name.slice(0, -5)), () => []);
-            for (const id of presentationIds) await renderPptFromBrief(teach.root, id, config.output_dir);
+            for (const id of presentationIds) {
+              const brief = parse(await readFile(path.join(teach.root, "presentations", `${id}.yaml`), "utf8")) as { lesson_id: string };
+              const plan = await loadSemanticPlan(teach.root, "slide", id);
+              if (plan?.kind === "slide") await renderPptFromBrief(teach.root, id, config.output_dir, plan, await createContextPacket(teach.root, "ppt", brief.lesson_id, id));
+            }
             const publicationIds = await readdir(path.join(teach.root, "publications")).then((files) => files.filter((name) => name.endsWith(".yaml")).map((name) => name.slice(0, -5)), () => []);
             for (const id of publicationIds) {
               const proposals = path.resolve(teach.root, config.output_dir, "wechat", id, "proposals.html");
-              if (await access(proposals).then(() => true, () => false)) await renderWechatProposals(teach.root, id, config.output_dir);
-              else await renderWechat(teach.root, id, config.output_dir);
+              const brief = parse(await readFile(path.join(teach.root, "publications", `${id}.yaml`), "utf8")) as { lesson_id: string };
+              const plan = await loadSemanticPlan(teach.root, "article", id);
+              if (plan?.kind !== "article") continue;
+              const packet = await createContextPacket(teach.root, "wechat", brief.lesson_id, id);
+              if (await access(proposals).then(() => true, () => false)) await renderWechatProposals(teach.root, id, config.output_dir, plan, packet);
+              else await renderWechat(teach.root, id, config.output_dir, { plan, packet });
             }
           }
         },

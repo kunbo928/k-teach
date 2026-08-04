@@ -167,11 +167,10 @@ k-teach capabilities --json
 k-teach tools --json
 k-teach init --tools codex,claude
 k-teach update
-k-teach validate
-k-teach render web
-k-teach render ppt --brief <presentation-brief-id>
-k-teach wechat render --brief <publication-brief-id>
-k-teach wechat render-proposals --brief <publication-brief-id>
+k-teach generate --intent learn --lesson <lesson-id> --json
+k-teach generate --intent ppt --brief <presentation-brief-id> --json
+k-teach generate --intent wechat --brief <publication-brief-id> [--draft] --json
+k-teach inspect --run <run-id> --json
 k-teach wechat account add <alias> --app-id <id> --name <name>
 k-teach preview [--open]
 ```
@@ -181,7 +180,7 @@ k-teach preview [--open]
 Teach。包内 Vite 统一提供 `/teachs/`、`/ppt/` 和 `/wechat/` 路由，Learning
 Project 不需要自己的 Node 依赖。预览服务仅监听 `127.0.0.1`，默认不打开浏览器。
 
-PPT 先通过 Presentation Brief 明确课堂教学或讲座分享。每份演示文稿是一个
+PPT 先通过 Presentation Brief 和 Slide Plan 明确课堂教学或讲座分享。每份演示文稿是一个
 真正自包含的 `index.html`，图片、样式和 presenter runtime 均内嵌。公众号
 帐号可按 alias 登记多个 AppID；AppSecret 只从对应环境变量读取，绝不写入配置。
 

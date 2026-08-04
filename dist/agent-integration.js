@@ -168,11 +168,9 @@ export function selectTools(value                    )              {
 }
 
 function generatedSkill(source        , version        )         {
+  void version;
   const pathCommands = source.replaceAll("node bin/k-teach.js", "k-teach");
-  return pathCommands.replace(
-    /^---\n/,
-    `---\nmetadata:\n  generatedBy: "${version}"\n`,
-  );
+  return pathCommands;
 }
 
 async function writeIfChanged(target        , content        )                {

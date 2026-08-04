@@ -5,7 +5,7 @@ import path from "node:path";
 import { marked, type Token, type Tokens } from "marked";
 import { parse } from "yaml";
 
-import type { LessonBundle, PresentationBrief } from "./domain.ts";
+import type { ContextPacket, LessonBundle, PresentationBrief, SlidePlan } from "./domain.ts";
 import { validateDocument } from "./schema.ts";
 import { renderDiagramSvg } from "./diagram-renderer.ts";
 import { KTeachError } from "./errors.ts";
@@ -15,12 +15,11 @@ import {
   type Exercise,
 } from "./lesson-bundle.ts";
 import {
-  isTeachingThemeId,
   resolveTeachingTheme,
-  TEACHING_THEME_IDS,
   TEACHING_THEMES,
   type TeachingTheme,
 } from "./teaching-themes.ts";
+import { validateSemanticPlan } from "./semantic-plan.ts";
 
 interface Slide {
   eyebrow: string;
@@ -100,70 +99,39 @@ function block(token: Token, media: Map<string, string>): string {
   return "";
 }
 
-function sectionSlides(
-  markdown: string,
+function semanticSlides(
+  plan: SlidePlan,
+  packet: ContextPacket,
   exercises: Exercise[],
   media: Map<string, string>,
-  brief?: PresentationBrief,
+  brief: PresentationBrief,
 ): Slide[] {
-  const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
-  const tokens = marked.lexer(markdown) as Token[];
-  const slides: Slide[] = [];
-  let title = "";
-  let body: Token[] = [];
-  const push = (): void => {
-    if (!title) return;
-    const ids: string[] = [];
-    const bodyHtml = body
-      .map((token) => {
-        if (token.type === "paragraph") {
-          const match = (token as Tokens.Paragraph).text.match(
-            /^\{\{exercise:([A-Za-z0-9][A-Za-z0-9_-]*)\}\}\s*$/,
-          );
-          if (match) {
-            const exercise = byId.get(match[1]);
-            if (!exercise) return "";
-            ids.push(exercise.id);
-            return `<section class="practice-card"><span class="practice-label">TRY THIS</span><p>${escapeHtml(exercise.prompt)}</p></section>`;
-          }
-        }
-        return block(token, media);
-      })
-      .join("");
-    if (brief && brief.exclude.includes(title)) return;
-    if (brief && brief.include.length > 0 && !brief.include.includes(title)) return;
-    const visibleExerciseIds = brief?.purpose === "talk" ? [] : ids;
-    const visibleBody = brief?.purpose === "talk"
-      ? bodyHtml.replace(/<section class="practice-card">[\s\S]*?<\/section>/g, "")
-      : bodyHtml;
-    slides.push({
-      eyebrow: visibleExerciseIds.length > 0 ? "PRACTICE" : brief?.purpose === "talk" ? "KEY IDEA" : "LESSON",
-      title,
-      body: visibleBody,
-      notes: `<p><strong>Intent:</strong> ${escapeHtml(brief?.purpose === "talk" ? "Advance the narrative with one clear claim or piece of evidence." : "Guide one clear teaching action in the learning sequence.")}</p><p><strong>Suggested delivery:</strong> Explain the visible content, pause for the audience, then connect it to the next slide.</p><p><strong>Transition:</strong> Continue from ${escapeHtml(title)} to the next step.</p><p><strong>Timing:</strong> 2–4 min</p>${visibleExerciseIds
-        .map((id) => byId.get(id))
-        .filter((exercise): exercise is Exercise => exercise !== undefined)
-        .map(
-          (exercise) =>
-            `<p><strong>Answer:</strong> ${escapeHtml(exercise.answer)}</p><p><strong>Feedback:</strong> ${escapeHtml(exercise.feedback)}</p>`,
-        )
-        .join("")}${brief?.purpose === "talk" ? "<p><strong>Optional cut:</strong> Remove this slide if the central claim remains supported.</p>" : ""}`,
-      layout: visibleExerciseIds.length > 0 ? "practice" : "content",
-    });
-  };
-  for (const token of tokens) {
-    if (token.type === "heading" && (token as Tokens.Heading).depth === 1)
-      continue;
-    if (token.type === "heading" && (token as Tokens.Heading).depth === 2) {
-      push();
-      title = (token as Tokens.Heading).text.trim();
-      body = [];
-    } else if (title && token.type !== "space") {
-      body.push(token);
+  const blocks = new Map(packet.sections.flatMap((section) => section.blocks.map((item) => [item.id, item])));
+  const sources = new Map(packet.sources.map((source) => [source.id, source]));
+  const exerciseById = new Map(exercises.map((exercise) => [exercise.id, exercise]));
+  const renderItems = (items: SlidePlan["slides"][number]["content"], notes: boolean): string => items.map((item) => item.source_refs.map((ref) => {
+    const source = sources.get(ref);
+    if (source) return `<p><strong>${escapeHtml(source.title)}</strong><br>${escapeHtml(source.url)}</p>`;
+    const semantic = blocks.get(ref);
+    if (!semantic) return "";
+    if (semantic.kind === "exercise") {
+      const encoded = JSON.parse(semantic.body) as Exercise;
+      const exercise = exerciseById.get(encoded.id) ?? encoded;
+      if (notes) return `<p><strong>Answer:</strong> ${escapeHtml(exercise.answer)}</p><p><strong>Feedback:</strong> ${escapeHtml(exercise.feedback)}</p>`;
+      if (brief.purpose === "talk") return "";
+      return `<section class="practice-card"><span class="practice-label">TRY THIS</span><p>${escapeHtml(exercise.prompt)}</p></section>`;
     }
-  }
-  push();
-  return slides;
+    return marked.lexer(semantic.body).map((token) => block(token as Token, media)).join("");
+  }).join("") + (item.mode === "authored" ? marked.lexer(item.text).map((token) => block(token as Token, media)).join("") : "")).join("");
+  return plan.slides
+    .filter((slide) => brief.purpose !== "talk" || slide.role !== "practice")
+    .map((slide) => ({
+      eyebrow: slide.role === "cover" ? `K TEACH · ${brief.purpose.toUpperCase()}` : slide.role.toUpperCase(),
+      title: slide.title,
+      body: renderItems(slide.content, false),
+      notes: renderItems(slide.speaker_notes, true) + renderItems(slide.content.filter((item) => item.source_refs.some((ref) => blocks.get(ref)?.kind === "exercise")), true),
+      layout: slide.role === "cover" ? "cover" : slide.role === "practice" ? "practice" : slide.role === "sources" ? "sources" : "content",
+    }));
 }
 
 function collectImages(tokens: Token[]): Tokens.Image[] {
@@ -251,8 +219,9 @@ function deckHtml(
   contentSlides: Slide[],
   theme: TeachingTheme,
   brief?: PresentationBrief,
+  planOwned = false,
 ): string {
-  const slides: Slide[] = [
+  const slides: Slide[] = planOwned ? contentSlides : [
     {
       eyebrow: brief?.purpose === "talk" ? "K TEACH · TALK" : "K TEACH · TEACHING",
       title: lesson.title,
@@ -285,7 +254,7 @@ function deckHtml(
     figure{margin:.8em 0;display:grid;justify-items:center}figure img{display:block;max-width:100%;max-height:31vh;object-fit:contain}figcaption{margin-top:.4em;color:var(--muted);font-size:.7em}.media-fallback{display:inline-block;padding:.7em 1em;border:1px solid var(--line);color:var(--muted)}.layout-cover h2{max-width:88%;font-size:clamp(42px,7vw,110px)}.mission{max-width:65%;font-family:var(--display);font-size:1.35em}.objectives{display:flex;flex-wrap:wrap;gap:.5em}.objectives span{padding:.45em .75em;border:1px solid var(--line);background:var(--accent-soft);font-size:.75em}
     .practice-card{max-width:78%;padding:1.4em 1.5em;border-left:.45em solid var(--accent);background:var(--accent-soft)}.practice-label{font-size:.62em;font-weight:900;letter-spacing:.18em;color:var(--accent)}.practice-card p{margin:.45em 0 0;font-family:var(--display);font-size:1.35em;line-height:1.25}.source-list{list-style:none!important;padding:0!important;counter-reset:source}.source-list li{counter-increment:source;display:grid;grid-template-columns:2em 1fr;column-gap:.6em}.source-list li::before{content:counter(source,decimal-leading-zero);color:var(--accent);font-weight:900}.source-list li span{grid-column:2;color:var(--muted);font-size:.72em;overflow-wrap:anywhere}.notes{display:none}
     .progress{position:fixed;left:0;bottom:0;height:4px;background:var(--accent);transition:width .25s}.help,.theme-name{position:fixed;bottom:10px;border:1px solid var(--line);border-radius:999px;background:color-mix(in srgb,var(--surface) 88%,transparent);color:var(--muted);padding:4px 9px;font-size:12px}.help{right:12px}.theme-name{left:12px}.overview{display:none;position:fixed;inset:0;z-index:5;overflow:auto;padding:4vw;background:#09130fed;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}.overview.is-open{display:grid}.overview button{aspect-ratio:16/9;border:2px solid transparent;background:var(--surface);color:var(--ink);padding:20px;text-align:left;cursor:pointer}.overview button:hover{border-color:var(--accent)}.presenter{display:none;position:fixed;inset:0;z-index:7;background:#08110e;color:#eef5f0;padding:3vw;grid-template-columns:1fr 1fr;gap:2vw}.presenter.is-open{display:grid}.presenter-card{overflow:auto;border:1px solid #ffffff33;padding:2vw}.presenter-card h3{margin-top:0;color:#9cc9ad}.presenter button{position:absolute;right:3vw;top:2vw}
-    @media print{html,body{overflow:visible;background:#fff}.deck{display:block;width:auto;height:auto}.slide{display:block!important;width:13.333in;height:7.5in;break-after:page;box-shadow:none}.progress,.help,.overview,.presenter{display:none!important}}@media(prefers-reduced-motion:reduce){.slide.is-active{animation:none}}
+    @page{size:13.333in 7.5in;margin:0}@media print{html,body{width:13.333in;height:auto;overflow:visible;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.deck{display:block;width:13.333in;height:auto}.slide{display:block!important;width:13.333in;height:7.5in;margin:0;break-after:page;border-radius:0;box-shadow:none}.slide.is-active{animation:none}.slide:last-child{break-after:auto}.progress,.help,.theme-name,.overview,.presenter{display:none!important}}@media(prefers-reduced-motion:reduce){.slide.is-active{animation:none}}
   </style>
 </head>
 <body>
@@ -306,8 +275,9 @@ export async function renderPpt(
   root: string,
   lessonId: string,
   outputDirectory: string,
-  requestedTheme?: string,
-  brief?: PresentationBrief,
+  brief: PresentationBrief,
+  plan: SlidePlan,
+  packet: ContextPacket,
 ): Promise<string> {
   await validateLessonBundles(root);
   const lessonDirectories = (await readdir(path.join(root, "lessons"), {
@@ -335,21 +305,8 @@ export async function renderPpt(
       "Pass the Lesson Bundle id or directory name with --lesson.",
     );
   }
-  const teach = parse(
-    await readFile(path.join(root, "teach.yaml"), "utf8").catch(() => "{}"),
-  ) as { theme_default?: unknown };
-  if (requestedTheme !== undefined && !isTeachingThemeId(requestedTheme)) {
-    throw new KTeachError(
-      "validation-failed",
-      `Unknown Teaching Theme: ${requestedTheme}.`,
-      `Use one of: ${TEACHING_THEME_IDS.join(", ")}.`,
-    );
-  }
   const theme = resolveTeachingTheme(
-    brief?.theme.id ?? requestedTheme ??
-      (isTeachingThemeId(teach.theme_default)
-        ? teach.theme_default
-        : "classic-manual"),
+    brief.theme.id,
   );
   const markdown = await readFile(path.join(lessonRoot, "lesson.md"), "utf8");
   const exercises = await readExercises(
@@ -360,7 +317,12 @@ export async function renderPpt(
   const output = path.resolve(root, outputDirectory, "ppt", brief?.id ?? lesson.id);
   await mkdir(output, { recursive: true });
   const media = await prepareMedia(root, lessonRoot, markdown);
-  const contentSlides = sectionSlides(markdown, exercises, media, brief);
+  const errors = await validateSemanticPlan(plan, packet);
+  if (errors.length) throw new KTeachError("invalid-brief", `Slide Plan: ${errors.join("; ")}.`, "Review and rebase the Slide Plan.");
+  const plannedSeconds = plan.slides.reduce((sum, slide) => sum + slide.duration_seconds, 0);
+  const targetSeconds = brief.duration_minutes * 60;
+  if (plannedSeconds < targetSeconds * 0.7 || plannedSeconds > targetSeconds * 1.3) throw new KTeachError("validation-failed", "Slide Plan timing is outside the Presentation Brief tolerance.", "Adjust duration_seconds to within 30% of the Brief duration.");
+  const contentSlides = semanticSlides(plan, packet, exercises, media, brief);
   if (contentSlides.length === 0) {
     throw new KTeachError(
       "render-failed",
@@ -372,7 +334,8 @@ export async function renderPpt(
     .update(lessonSource)
     .update(markdown)
     .update(JSON.stringify(exercises))
-    .update(brief ? JSON.stringify(brief) : "legacy-ppt")
+    .update(JSON.stringify(brief))
+    .update(JSON.stringify(plan))
     .digest("hex");
   const manifest = {
     schema_version: 1,
@@ -395,7 +358,7 @@ export async function renderPpt(
   await Promise.all([
     writeFile(
       path.join(output, "index.html"),
-      deckHtml(lesson, contentSlides, theme, brief),
+      deckHtml(lesson, contentSlides, theme, brief, true),
     ),
     writeFile(
       path.join(output, "manifest.json"),
@@ -405,7 +368,7 @@ export async function renderPpt(
   return output;
 }
 
-export async function renderPptFromBrief(root: string, briefId: string, outputDirectory: string): Promise<string> {
+export async function renderPptFromBrief(root: string, briefId: string, outputDirectory: string, plan: SlidePlan, packet: ContextPacket): Promise<string> {
   const sourcePath = path.join(root, "presentations", `${briefId}.yaml`);
   let value: unknown;
   try { value = parse(await readFile(sourcePath, "utf8")); } catch {
@@ -415,5 +378,5 @@ export async function renderPptFromBrief(root: string, briefId: string, outputDi
   if (errors.length > 0) throw new KTeachError("invalid-brief", `${briefId}: ${errors.join("; ")}.`, "Correct the Presentation Brief and render again.");
   const brief = value as PresentationBrief;
   if (brief.id !== briefId) throw new KTeachError("invalid-brief", "Presentation Brief id does not match --brief.", "Use the file whose id matches the requested brief.");
-  return renderPpt(root, brief.lesson_id, outputDirectory, undefined, brief);
+  return renderPpt(root, brief.lesson_id, outputDirectory, brief, plan, packet);
 }

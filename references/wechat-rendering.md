@@ -13,23 +13,15 @@ The brief must match the current Lesson Bundle revision. `include` and
 Exercises, answers, progress, feedback controls, and local Web Lesson links are
 never read into the article.
 
-Render locally:
+Generate locally:
 
 ```sh
-k-teach wechat render --brief <brief-id>
+k-teach generate --intent wechat --brief <brief-id> --json
 ```
 
-Only when the user explicitly asks to compare themes, render all three
-candidates in one immersive/compare/responsive shell:
-
-```sh
-k-teach wechat render-proposals --brief <brief-id>
-k-teach preview --open
-```
-
-Run both commands as one uninterrupted preview workflow from the Learning
-Project root. Keep the Vite process alive and return the HTTP URL it prints;
-do not hand off a `file://` URL and do not assume port 4173 is available.
+Only when the user explicitly asks to compare themes, use the narrow proposal
+and preview diagnostics after Generation Run completes. Keep preview alive and
+return its printed HTTP URL; do not hand off a `file://` URL.
 
 Output lives under `.k-teach/output/wechat/<brief-id>/`:
 
@@ -97,19 +89,17 @@ creating content:
 k-teach doctor wechat --account <alias>
 ```
 
-Create a draft from an already-rendered and eligible artifact, then optionally
-send it to one explicit OpenID:
+Create an authorized draft through Generation Run. Recipient preview remains a
+separate explicit operation:
 
 ```sh
-k-teach wechat draft --brief <brief-id> --account <alias>
+k-teach generate --intent wechat --brief <brief-id> --draft --json
 k-teach wechat preview --attempt <attempt-id> --openid <openid>
 ```
 
-When the clarified Publication Brief contains an authorized `draft_delivery`
-for the selected account, `wechat draft` proceeds without another terminal
-prompt. Without that scoped authorization, the CLI retains its interactive
-confirmation for backward compatibility. Draft authorization never authorizes
-public publication.
+The current Publication Brief must contain matching account-scoped
+`draft_delivery` authorization. There is no fallback prompt in Generation Run.
+Draft authorization never authorizes public publication.
 
 The recipient is stored only as a SHA-256 audit hash. Public publishing requires
 both Publication Brief authorization and a current interactive terminal. It has

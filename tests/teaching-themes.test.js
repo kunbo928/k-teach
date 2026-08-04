@@ -30,27 +30,23 @@ test("all seven Teaching Themes have complete unique visual tokens", () => {
   }
 });
 
-test("all seven Teaching Themes are valid Publication Brief choices", async () => {
+test("all seven Teaching Themes are valid Presentation Brief choices", async () => {
   for (const theme of TEACHING_THEMES) {
     const brief = {
       schema_version: 1,
       id: `brief-${theme.id}`,
       revision: "2026-07-31T00:00:00Z",
+      purpose: "teaching",
+      duration_minutes: 30,
       lesson_id: "lesson-01",
       lesson_revision: "2026-07-31T00:00:00Z",
-      title: "主题验证",
       audience: "学习者",
-      angle: "验证主题",
       include: [],
       exclude: [],
-      theme: theme.id,
-      author: "K Teach",
-      summary: "验证每套主题均可用于公众号渲染。",
-      cover: { mode: "generated" },
-      authorized_for_publication: false,
+      theme: { id: theme.id, source: "brief", reason: "验证主题" },
     };
     assert.deepEqual(
-      await validateDocument("publication-brief", brief),
+      await validateDocument("presentation-brief", brief),
       [],
       theme.id,
     );

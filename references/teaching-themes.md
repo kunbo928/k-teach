@@ -40,13 +40,13 @@ For a WeChat Publication Brief, set:
 theme: editorial-desk
 ```
 
-For a PPT, pass:
+For a PPT, record the theme in its Presentation Brief and run:
 
 ```sh
-k-teach render ppt --lesson <lesson-id> --theme future-lab
+k-teach generate --intent ppt --brief <presentation-brief-id> --json
 ```
 
-If `--theme` is omitted, PPT uses the Teach default, then
+If the Brief does not choose a theme, PPT uses the Teach default, then
 `classic-manual`. Press `T` inside the generated deck to cycle through all seven
 implemented themes.
 

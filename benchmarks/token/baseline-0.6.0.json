@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "package": {
+    "name": "k-teach",
+    "version": "0.6.0",
+    "registry": "https://registry.npmjs.org",
+    "tarball": "https://registry.npmjs.org/k-teach/-/k-teach-0.6.0.tgz",
+    "registry_integrity": "sha512-nesUABzyRVgjwpTZCX9iNHcVsT74NTbnsJaLVswxgIItPcCH9s6A4IjDuK8L96cRN0pv7GQZDFdg8wMftAn+ew==",
+    "registry_shasum": "cf45ed9718a6cd672cae3ef6834f52fcd2567462",
+    "tarball_sha256": "00165684c6f35c4a64b5630f5b2fe3b28d9a99727588044c954a3bbb956aa845",
+    "file_count": 66,
+    "unpacked_size": 327510
+  },
+  "source": {
+    "git_commit": "d8299d0d4d47c64a1da52aee7fdd04d4b5dabf88",
+    "commit_time": "2026-08-04T14:36:47+08:00",
+    "skill_sha256": "5671d20f652edf3945301752d94e27ed74ecc95055551ddaf9ff9456e27210a8",
+    "package_json_sha256": "545822e70f3ae629c08f00ef5fa5ed823679a703581dce8e0ca9a41474e1765b",
+    "pnpm_lock_sha256": "01b00f76257243518efdc2e43e62f1fe83d04b3d1225b2b9ab07abc30deced01"
+  },
+  "static_tokens": {
+    "instrument": "tiktoken 0.13.0 / cl100k_base",
+    "canonical_skill": 1784,
+    "all_references": 5407,
+    "common_required_surface": 3600,
+    "wechat_with_theme": 5388,
+    "wechat_domain_authoring": 6240
+  },
+  "smoke": {
+    "node": "24.16.0",
+    "npm": "11.13.0",
+    "version_stdout": "0.6.0",
+    "capabilities_sha256": "9ca68d070009646aad0b7384f934370c75f69acbe780fc54d7dac5c134863350",
+    "installed_from_official_tarball": true
+  }
+}

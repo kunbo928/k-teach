@@ -168,11 +168,9 @@ export function selectTools(value: string | undefined): AgentTool[] {
 }
 
 function generatedSkill(source: string, version: string): string {
+  void version;
   const pathCommands = source.replaceAll("node bin/k-teach.js", "k-teach");
-  return pathCommands.replace(
-    /^---\n/,
-    `---\nmetadata:\n  generatedBy: "${version}"\n`,
-  );
+  return pathCommands;
 }
 
 async function writeIfChanged(target: string, content: string): Promise<void> {

@@ -347,8 +347,14 @@ function renderIndex(
   return documentShell("K Teach 学习手册", body, "", teachId, themeDefault);
 }
 
-export async function renderWeb(root: string, outputDir: string): Promise<string> {
-  const lessons = await loadLessons(root);
+export async function renderWeb(root: string, outputDir: string, options: { lessonId?: string } = {}): Promise<string> {
+  const allLessons = await loadLessons(root);
+  const lessons = options.lessonId
+    ? allLessons.filter((lesson) => lesson.metadata.id === options.lessonId)
+    : allLessons;
+  if (options.lessonId && lessons.length === 0) {
+    throw new KTeachError("validation-failed", `Lesson ${options.lessonId} was not found.`, "Pass an existing lesson ID.");
+  }
   const teach = parse(
     await readFile(path.join(root, "teach.yaml"), "utf8").catch(
       () => `id: ${path.basename(root)}\n`,

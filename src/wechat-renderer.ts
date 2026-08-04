@@ -12,8 +12,8 @@ import { marked, type Token, type Tokens } from "marked";
 import sharp from "sharp";
 import { parse } from "yaml";
 
-import type { ChannelThemeId, LessonBundle, PublicationBrief, PublicationBriefV1 } from "./domain.ts";
-import { migratePublicationBrief } from "./contract-migrations.ts";
+import type { ArticlePlan, ChannelThemeId, ContextPacket, LessonBundle, PublicationBrief } from "./domain.ts";
+import { validateSemanticPlan } from "./semantic-plan.ts";
 import { renderDiagramSvg } from "./diagram-renderer.ts";
 import {
   resolveEmbeddedAssets,
@@ -317,41 +317,24 @@ function renderBlock(token: Token, context: InlineContext): string {
   return "";
 }
 
-function selectBlocks(markdown: string, brief: PublicationBrief): Token[] {
-  const tokens = marked.lexer(markdown) as Token[];
-  const included = new Set(brief.include);
-  const excluded = new Set(brief.exclude);
-  const selected: Token[] = [];
-  let active = false;
-  for (const token of tokens) {
-    if (token.type === "heading" && (token as Tokens.Heading).depth === 1) {
-      continue;
-    }
-    if (token.type === "heading" && (token as Tokens.Heading).depth === 2) {
-      const title = (token as Tokens.Heading).text.trim();
-      active =
-        !excluded.has(title) && (included.size === 0 || included.has(title));
-    }
-    if (active && token.type !== "space") selected.push(token);
-  }
-  const sanitized: Token[] = [];
-  let section: Token[] = [];
-  const flush = () => {
-    if (section.length === 0) return;
-    const [heading, ...body] = section;
-    const publicBody = body.filter((token) => !(
-      token.type === "paragraph" &&
-      /^\{\{exercise:[A-Za-z0-9][A-Za-z0-9_-]*\}\}\s*$/.test((token as Tokens.Paragraph).text)
-    ));
-    if (publicBody.length > 0) sanitized.push(heading, ...publicBody);
-    section = [];
-  };
-  for (const token of selected) {
-    if (token.type === "heading" && (token as Tokens.Heading).depth === 2) flush();
-    section.push(token);
-  }
-  flush();
-  return sanitized;
+function selectPlanBlocks(plan: ArticlePlan, packet: ContextPacket): Token[] {
+  const blocks = new Map(packet.sections.flatMap((section) => section.blocks.map((item) => [item.id, item])));
+  const sources = new Set(packet.sources.map((source) => source.id));
+  const markdown = plan.blocks.map((item) => {
+    const heading = item.heading ? `## ${item.heading}\n\n` : "";
+    const body = item.content.map((content) => {
+      const references = content.source_refs.map((ref) => {
+        if (sources.has(ref)) return "";
+        const block = blocks.get(ref);
+        if (!block) return "";
+        if (block.kind === "asset") return block.asset_ids.map((id) => `{{asset:${id}}}`).join("\n\n");
+        return block.kind === "exercise" ? "" : block.body;
+      }).filter(Boolean).join("\n\n");
+      return [references, content.mode === "authored" ? content.text : ""].filter(Boolean).join("\n\n");
+    }).filter(Boolean).join("\n\n");
+    return `${heading}${body}`;
+  }).filter(Boolean).join("\n\n");
+  return marked.lexer(markdown) as Token[];
 }
 
 function renderSources(
@@ -699,13 +682,14 @@ function wrapPreview(title: string, article: string): string {
   <header class="toolbar"><span>仅供本地检查</span><button type="button" data-copy>复制正文</button></header>
   <main data-article>${article}</main>
   <script>
-    document.querySelector("[data-copy]").addEventListener("click",async()=>{
-      const article=document.querySelector("[data-article]");
-      await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([article.innerHTML],{type:"text/html"}),"text/plain":new Blob([article.innerText],{type:"text/plain"})})]);
-    });
+    ${copyArticleRuntime('document.querySelector("[data-article]")')}
   </script>
 </body>
 </html>`;
+}
+
+function copyArticleRuntime(articleExpression: string): string {
+  return `document.querySelector("[data-copy]").addEventListener("click",async()=>{const button=document.querySelector("[data-copy]"),article=${articleExpression},text=article.innerText,html=article.innerHTML;button.dataset.copyState="pending";async function fallback(){if(navigator.clipboard&&typeof navigator.clipboard.writeText==="function"){await navigator.clipboard.writeText(text);return}const area=document.createElement("textarea");area.value=text;area.setAttribute("readonly","");area.style.position="fixed";area.style.opacity="0";document.body.appendChild(area);area.select();const copied=document.execCommand("copy");area.remove();if(!copied)throw new Error("copy-unavailable")}try{if(navigator.clipboard&&typeof navigator.clipboard.write==="function"&&typeof ClipboardItem==="function")await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]);else await fallback();button.dataset.copyState="success";button.textContent="已复制"}catch(error){try{await fallback();button.dataset.copyState="success";button.textContent="已复制"}catch(fallbackError){button.dataset.copyState="failed";button.textContent="复制失败";button.title="浏览器未授权剪贴板，请手动选择正文复制"}}});`;
 }
 
 const CHANNEL_THEMES: Array<{ id: ChannelThemeId; label: string; reason: string }> = [
@@ -750,7 +734,7 @@ function wrapProposalPreview(title: string, articles: Record<ChannelThemeId, str
   *{box-sizing:border-box}body{margin:0;background:#111915;color:#eef4ef;font:14px/1.6 system-ui,sans-serif}.shell{min-height:100vh}.toolbar{position:sticky;top:0;z-index:4;display:flex;gap:8px;align-items:center;padding:12px 18px;background:#111915eF;border-bottom:1px solid #ffffff24}.toolbar button{padding:8px 12px;border:1px solid #ffffff38;background:transparent;color:inherit;cursor:pointer}.toolbar button[aria-pressed="true"]{background:#e7eee8;color:#193c2d}.toolbar [data-mode]{margin-left:auto}.stage{padding:28px}.stage article{display:none}.stage article[data-selected]{display:block}.stage article>header{width:min(100%,677px);margin:0 auto 12px;display:grid}.stage article>header span{color:#a9b8ae}.stage main{width:min(100%,677px);margin:auto;background:#f5f1e8;box-shadow:0 18px 60px #0008}.stage.compare{display:grid;grid-template-columns:repeat(3,minmax(360px,1fr));gap:20px;overflow:auto}.stage.compare article{display:block}.stage.compare article main{width:100%}.stage.compare article>header{width:100%}.copy{position:fixed;right:18px;bottom:18px;padding:11px 16px;border:0;background:#d6e6da;color:#173d2d;font-weight:700}
   @media(max-width:720px){.toolbar{position:fixed;inset:auto 0 0;overflow:auto}.toolbar [data-mode]{display:none}.stage{padding:16px 12px 84px}.stage.compare{display:block}.stage.compare article:not([data-selected]){display:none}.copy{right:12px;bottom:64px}}
   </style></head><body><section class="shell"><nav class="toolbar">${buttons}<button type="button" data-mode>并排比较</button></nav><section class="stage">${panels}</section><button class="copy" type="button" data-copy>复制当前正文</button></section><script>
-  const stage=document.querySelector(".stage"),buttons=[...document.querySelectorAll("[data-theme]")],articles=[...document.querySelectorAll("[data-proposal]")];let selected=${JSON.stringify(selected)};function choose(id){selected=id;buttons.forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.theme===id)));articles.forEach(article=>article.toggleAttribute("data-selected",article.dataset.proposal===id))}buttons.forEach(button=>button.onclick=()=>choose(button.dataset.theme));document.querySelector("[data-mode]").onclick=()=>stage.classList.toggle("compare");document.querySelector("[data-copy]").onclick=async()=>{const article=document.querySelector('[data-proposal="'+selected+'"] [data-article]');await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([article.innerHTML],{type:"text/html"}),"text/plain":new Blob([article.innerText],{type:"text/plain"})})])};choose(selected);
+  const stage=document.querySelector(".stage"),buttons=[...document.querySelectorAll("[data-theme]")],articles=[...document.querySelectorAll("[data-proposal]")];let selected=${JSON.stringify(selected)};function choose(id){selected=id;buttons.forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.theme===id)));articles.forEach(article=>article.toggleAttribute("data-selected",article.dataset.proposal===id))}buttons.forEach(button=>button.onclick=()=>choose(button.dataset.theme));document.querySelector("[data-mode]").onclick=()=>stage.classList.toggle("compare");${copyArticleRuntime(`document.querySelector('[data-proposal="'+selected+'"] [data-article]')`)}choose(selected);
   </script></body></html>`;
 }
 
@@ -891,7 +875,7 @@ export async function renderWechat(
   root: string,
   briefId: string,
   outputDirectory: string,
-  options: { proposals?: boolean } = {},
+  options: { proposals?: boolean; plan: ArticlePlan; packet: ContextPacket },
 ): Promise<string> {
   await validateLessonBundles(root);
   const briefPath = path.join(root, "publications", `${briefId}.yaml`);
@@ -916,9 +900,7 @@ export async function renderWechat(
       { errors: briefErrors },
     );
   }
-  const brief = migratePublicationBrief(
-    briefValue as PublicationBrief | PublicationBriefV1,
-  );
+  const brief = briefValue as PublicationBrief;
   if (brief.id !== briefId) {
     throw new KTeachError(
       "invalid-brief",
@@ -958,7 +940,9 @@ export async function renderWechat(
     );
   }
   const markdown = await readFile(path.join(lessonDirectory, "lesson.md"), "utf8");
-  const selected = selectBlocks(markdown, brief);
+  const planErrors = await validateSemanticPlan(options.plan, options.packet);
+  if (planErrors.length) throw new KTeachError("invalid-brief", `Article Plan: ${planErrors.join("; ")}.`, "Review and rebase the Article Plan.");
+  const selected = selectPlanBlocks(options.plan, options.packet);
   const markdownMedia = await prepareMedia(root, lessonDirectory, selected);
   const embedded = await resolveEmbeddedAssets(lessonDirectory, lesson, markdown);
   const embeddedMedia = await prepareEmbeddedMedia(root, lessonDirectory, selected, embedded.assets, markdownMedia.length);
@@ -997,6 +981,7 @@ export async function renderWechat(
     .update(lessonSource)
     .update(markdown)
     .update(briefSource)
+    .update(JSON.stringify(options.plan))
     .digest("hex");
   const manifest = {
     schema_version: 2,
@@ -1126,6 +1111,6 @@ export async function renderWechat(
   return output;
 }
 
-export async function renderWechatProposals(root: string, briefId: string, outputDirectory: string): Promise<string> {
-  return renderWechat(root, briefId, outputDirectory, { proposals: true });
+export async function renderWechatProposals(root: string, briefId: string, outputDirectory: string, plan: ArticlePlan, packet: ContextPacket): Promise<string> {
+  return renderWechat(root, briefId, outputDirectory, { proposals: true, plan, packet });
 }

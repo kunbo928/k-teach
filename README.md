@@ -200,11 +200,10 @@ k-teach capabilities --json
 k-teach tools --json
 k-teach init --tools codex,claude
 k-teach update
-k-teach validate
-k-teach render web
-k-teach render ppt --brief <presentation-brief-id>
-k-teach wechat render --brief <publication-brief-id>
-k-teach wechat render-proposals --brief <publication-brief-id>
+k-teach generate --intent learn --lesson <lesson-id> --json
+k-teach generate --intent ppt --brief <presentation-brief-id> --json
+k-teach generate --intent wechat --brief <publication-brief-id> [--draft] --json
+k-teach inspect --run <run-id> --json
 k-teach wechat account add <alias> --app-id <id> --name <name>
 k-teach preview [--open]
 ```
@@ -216,7 +215,7 @@ serves `/teachs/`, `/ppt/`, and `/wechat/`; Learning Projects need no local
 Node setup. It binds only to `127.0.0.1` and opens a browser only with
 `--open`.
 
-A Presentation Brief distinguishes classroom teaching from a talk. Every deck
+A Presentation Brief and Slide Plan distinguish classroom teaching from a talk. Every deck
 is one genuinely self-contained `index.html`, including media, CSS, and the
 presenter runtime. Multiple WeChat AppIDs can be registered by alias; AppSecret
 is resolved only from the matching environment variable and is never stored.
