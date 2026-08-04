@@ -6,6 +6,7 @@ import path from "node:path";
 import { createConnection } from "node:net";
 
 import { createServer as createViteServer,                                 } from "vite";
+import { userCacheDir } from "./user-paths.js";
 
 
 
@@ -219,7 +220,7 @@ async function portOccupied(port        , host        )                   {
 }
 
 async function writeInstanceRecord(options                       , port        , instanceId        )                {
-  const cacheRoot = options.cacheDir ?? path.join(process.env.XDG_CACHE_HOME ?? path.join(process.env.HOME ?? options.projectRoot, ".cache"), "k-teach", "preview-instances");
+  const cacheRoot = path.join(options.cacheDir ?? userCacheDir({ cwd: options.projectRoot }), "preview-instances");
   await mkdir(cacheRoot, { recursive: true, mode: 0o700 });
   const key = Buffer.from(path.resolve(options.projectRoot)).toString("base64url");
   const destination = path.join(cacheRoot, `${key}.json`);
@@ -270,7 +271,7 @@ export async function startPreviewRuntime(options                       )       
     appType: "custom",
     clearScreen: false,
     configFile: false,
-    cacheDir: path.join(options.cacheDir ?? path.join(process.env.XDG_CACHE_HOME ?? path.join(process.env.HOME ?? options.projectRoot, ".cache"), "k-teach"), "vite"),
+    cacheDir: path.join(options.cacheDir ?? userCacheDir({ cwd: options.projectRoot }), "vite"),
     root: options.projectRoot,
     logLevel: "silent",
     plugins: [previewPlugin(options, instanceId)],

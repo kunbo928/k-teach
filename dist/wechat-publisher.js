@@ -16,6 +16,7 @@ import {
   migratePublicationAttempt,
   migrateWechatArtifactManifest,
 } from "./contract-migrations.js";
+import { userCacheDir } from "./user-paths.js";
 
 const OFFICIAL_API_BASE_URL = "https://api.weixin.qq.com";
 
@@ -153,11 +154,7 @@ export async function readWechatAttempt(
 function cachePath(options                        )         {
   const base =
     options.cacheDir ??
-    path.join(
-      process.env.XDG_CACHE_HOME ??
-        path.join(process.env.HOME ?? options.cwd, ".cache"),
-      "k-teach",
-    );
+    userCacheDir({ cwd: options.cwd });
   return path.join(base, `wechat-${options.accountAlias}-token.json`);
 }
 

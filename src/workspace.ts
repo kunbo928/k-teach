@@ -4,11 +4,13 @@ import { parse } from "yaml";
 
 import { KTeachError } from "./errors.ts";
 
-const DEFAULT_CONFIG = `schema_version: 1
+function defaultConfig(wechatAccount?: string): string {
+  return `schema_version: 1
 design_profile: field-manual
 output_dir: .k-teach/output
 visuals: auto
-`;
+${wechatAccount ? `wechat_account: ${wechatAccount}\n` : ""}`;
+}
 
 const WORKSPACE_DOCUMENTS: Readonly<Record<string, string>> = {
   "MISSION.md": `# Mission: <topic>
@@ -148,6 +150,7 @@ export async function initializeTeach(
 export async function initializeWorkspace(
   root: string,
   initialTeach = "main",
+  wechatAccount?: string,
 ): Promise<void> {
   if (
     path.basename(path.dirname(root)) === "teachs" ||
@@ -163,7 +166,7 @@ export async function initializeWorkspace(
   await mkdir(configRoot, { recursive: true });
   await mkdir(path.join(root, "teachs"), { recursive: true });
   try {
-    await writeFile(path.join(configRoot, "config.yaml"), DEFAULT_CONFIG, {
+    await writeFile(path.join(configRoot, "config.yaml"), defaultConfig(wechatAccount), {
       encoding: "utf8",
       flag: "wx",
     });

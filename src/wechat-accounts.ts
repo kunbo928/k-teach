@@ -6,10 +6,10 @@ import { parse, stringify } from "yaml";
 import type { WechatAccount, WechatAccountRegistry } from "./domain.ts";
 import { KTeachError } from "./errors.ts";
 import { validateDocument } from "./schema.ts";
+import { userConfigDir } from "./user-paths.ts";
 
 export function wechatAccountsPath(environment: NodeJS.ProcessEnv = process.env): string {
-  const configHome = environment.XDG_CONFIG_HOME ?? path.join(environment.HOME ?? process.cwd(), ".config");
-  return path.join(configHome, "k-teach", "wechat-accounts.yaml");
+  return path.join(userConfigDir({ environment }), "wechat-accounts.yaml");
 }
 
 export async function readWechatAccounts(file = wechatAccountsPath()): Promise<WechatAccountRegistry> {

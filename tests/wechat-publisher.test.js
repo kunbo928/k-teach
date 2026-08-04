@@ -174,7 +174,9 @@ test("official publisher uploads media, drafts, previews, confirms publish, and 
     );
     assert.equal(persisted.state, "published");
     assert.doesNotMatch(JSON.stringify(persisted), /secret-access-token|fake-app-secret|openid-sensitive/);
-    assert.equal((await stat(path.join(workspace, "cache", "wechat-main-token.json"))).mode & 0o777, 0o600);
+    if (process.platform !== "win32") {
+      assert.equal((await stat(path.join(workspace, "cache", "wechat-main-token.json"))).mode & 0o777, 0o600);
+    }
 
     const draftRequest = mock.requests.find((entry) =>
       entry.url.startsWith("/cgi-bin/draft/add"),

@@ -120,6 +120,15 @@ k-teach init --tools codex,claude --teach mathematics
 k-teach teach create photography
 ```
 
+如果用户级账号表中只有一个微信公众号账号，`init` 会把它的 alias 作为
+`wechat_account` 写入 `.k-teach/config.yaml`。存在多个账号时，交互式
+`init` 只选择一次项目默认账号；非交互环境使用
+`--wechat-account <alias>`。AppSecret 永远不会写入项目配置。
+
+用户级状态遵循平台环境约定：显式配置时使用 XDG 路径；Windows 使用
+`%APPDATA%/k-teach` 和 `%LOCALAPPDATA%/k-teach/cache`；macOS 与 Linux
+保留现有的 `~/.config/k-teach` 和 `~/.cache/k-teach` 布局。
+
 支持使用 `npx k-teach init --tools ...` 做一次性试用；generated Skill 会通过
 `PATH` 调用 `k-teach`，因此持久 Agent 使用仍需要全局 CLI。
 

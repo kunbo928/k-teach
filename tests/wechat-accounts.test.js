@@ -22,7 +22,9 @@ test("user account registry stores multiple AppIDs but never a secret", async ()
   assert.equal((await requireWechatAccount("b", file)).name, "帐号 B");
   const source = await readFile(file, "utf8");
   assert.doesNotMatch(source, /secret|APP_SECRET/i);
-  assert.equal((await stat(file)).mode & 0o777, 0o600);
+  if (process.platform !== "win32") {
+    assert.equal((await stat(file)).mode & 0o777, 0o600);
+  }
   assert.equal(maskedAppId("wx123456789"), "•••••456789");
 });
 

@@ -148,6 +148,17 @@ k-teach init --tools codex,claude --teach mathematics
 k-teach teach create photography
 ```
 
+If exactly one user-level WeChat account is registered, `init` records its
+alias as `wechat_account` in `.k-teach/config.yaml`. With multiple registered
+accounts, interactive `init` asks once for the project default; in a
+non-interactive environment, pass `--wechat-account <alias>`. AppSecret is
+never written to project configuration.
+
+User-level state follows each platform's environment conventions: XDG paths
+when configured, `%APPDATA%/k-teach` and `%LOCALAPPDATA%/k-teach/cache` on
+Windows, and the existing `~/.config/k-teach` and `~/.cache/k-teach` layout on
+macOS and Linux.
+
 For a one-time trial, `npx k-teach init --tools ...` is supported. Persistent
 Agent use still requires the global CLI because generated Skills invoke
 `k-teach` through `PATH`.

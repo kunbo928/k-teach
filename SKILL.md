@@ -117,8 +117,11 @@ migration notice. Every deck is one self-contained `index.html`; media,
 styling, and runtime code are inline.
 Register and inspect WeChat accounts without storing AppSecret:
 `k-teach wechat account add <alias> --app-id <id> --name <name>` and
-`k-teach wechat account list`. Put only the alias-specific AppSecret in the
-environment. Use `k-teach wechat render-proposals --brief <id>` only for an
+`k-teach wechat account list`. During project initialization, bind the only
+registered account automatically, select one project default when several are
+available, or pass `--wechat-account <alias>` in a non-interactive environment.
+Store only that alias in `.k-teach/config.yaml`. Put only the alias-specific
+AppSecret in the environment. Use `k-teach wechat render-proposals --brief <id>` only for an
 explicit local theme comparison.
 For an explicitly requested remote WeChat operation, read
 [wechat-rendering.md](references/wechat-rendering.md), run `doctor wechat`,

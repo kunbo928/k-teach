@@ -89,6 +89,61 @@ test("init creates a valid Learning Project and initial Teach without overwritin
   assert.equal(second.exitCode, 0);
 });
 
+test("init binds the only registered WeChat account as the project default", async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-init-account-"));
+  const configHome = path.join(workspace, "user-config");
+  const environment = { XDG_CONFIG_HOME: configHome };
+  assert.equal(
+    (await runCli([
+      "wechat", "account", "add", "editorial", "--app-id", "wx123456789", "--name", "编辑部",
+    ], workspace, environment)).exitCode,
+    0,
+  );
+
+  const initialized = await runCli(["init", "--tools", "none"], workspace, environment);
+
+  assert.equal(initialized.exitCode, 0, initialized.stderr);
+  assert.match(
+    await readFile(path.join(workspace, ".k-teach", "config.yaml"), "utf8"),
+    /^wechat_account: editorial$/m,
+  );
+});
+
+test("non-interactive init with multiple accounts requires an explicit project default", async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), "k-teach-init-accounts-"));
+  const configHome = path.join(workspace, "user-config");
+  const environment = { XDG_CONFIG_HOME: configHome };
+  for (const [alias, appId] of [["editorial", "wx111111"], ["training", "wx222222"]]) {
+    assert.equal(
+      (await runCli([
+        "wechat", "account", "add", alias, "--app-id", appId, "--name", alias,
+      ], workspace, environment)).exitCode,
+      0,
+    );
+  }
+
+  const skipped = await runCli(["init", "--tools", "none"], workspace, environment);
+
+  assert.equal(skipped.exitCode, 0, skipped.stderr);
+  assert.match(skipped.stdout, /no project default was set/i);
+  assert.doesNotMatch(
+    await readFile(path.join(workspace, ".k-teach", "config.yaml"), "utf8"),
+    /wechat_account:/,
+  );
+
+  const explicitWorkspace = path.join(workspace, "explicit");
+  const bound = await runCli(
+    ["init", explicitWorkspace, "--tools", "none", "--wechat-account", "training"],
+    workspace,
+    environment,
+  );
+  assert.equal(bound.exitCode, 0, bound.stderr);
+  assert.match(
+    await readFile(path.join(explicitWorkspace, ".k-teach", "config.yaml"), "utf8"),
+    /^wechat_account: training$/m,
+  );
+});
+
 test("one Learning Project supports multiple isolated Teachs", async () => {
   const project = await mkdtemp(path.join(tmpdir(), "k-teach-multi-"));
   assert.equal(

@@ -42,6 +42,7 @@ import {
 import { searchableMultiSelect } from "./searchable-multi-select.ts";
 import { TEACHING_THEME_IDS } from "./teaching-themes.ts";
 import { addWechatAccount, markWechatAccountSuccessful, maskedAppId, readWechatAccounts, requireWechatAccount } from "./wechat-accounts.ts";
+import { userConfigDir } from "./user-paths.ts";
 
 export const CLI_VERSION = "__K_TEACH_PACKAGE_VERSION__";
 
@@ -113,6 +114,41 @@ async function resolveWechatAccountAlias(explicit: string | undefined, preferred
   return selected[0];
 }
 
+async function chooseInitialWechatAccount(
+  explicit: string | undefined,
+): Promise<string | undefined> {
+  if (explicit) {
+    await requireWechatAccount(explicit);
+    return explicit;
+  }
+  const registry = await readWechatAccounts();
+  if (registry.accounts.length === 0) return undefined;
+  if (registry.accounts.length === 1) return registry.accounts[0].alias;
+  if (!stdin.isTTY || !stdout.isTTY) {
+    process.stdout.write(
+      "Multiple WeChat accounts are registered; no project default was set. Pass --wechat-account <alias> to bind one during non-interactive init.\n",
+    );
+    return undefined;
+  }
+  const accounts = [...registry.accounts].sort(
+    (left, right) =>
+      Number(right.alias === registry.last_successful_alias) -
+      Number(left.alias === registry.last_successful_alias),
+  );
+  const selected = await searchableMultiSelect({
+    message: "Select the default WeChat account for this project",
+    pageSize: 12,
+    choices: accounts.map((account) => ({
+      name: `${account.alias} · ${account.name} · ${maskedAppId(account.app_id)} · ${account.last_doctor_status ?? "unknown"}`,
+      value: account.alias,
+      detected: account.alias === registry.last_successful_alias,
+      preSelected: account.alias === registry.last_successful_alias,
+    })),
+    validate: (values) => values.length === 1 || "Select exactly one account",
+  });
+  return selected[0];
+}
+
 async function confirmDraft(summary: string): Promise<boolean> {
   if (!stdin.isTTY || !stdout.isTTY) throw new KTeachError("validation-failed", "Creating a WeChat draft requires an interactive confirmation.", "Run the command in an interactive terminal after reviewing the account summary.");
   const reader = (await import("node:readline/promises")).createInterface({ input: stdin, output: stdout });
@@ -171,7 +207,14 @@ export async function main(args: string[]): Promise<number> {
       const projectRoot = path.resolve(process.cwd(), targetArg ?? ".");
       const toolsValue = option(args, "--tools");
       const tools = await chooseTools(projectRoot, toolsValue);
-      await initializeWorkspace(projectRoot, option(args, "--teach") ?? "main");
+      const wechatAccount = await chooseInitialWechatAccount(
+        option(args, "--wechat-account"),
+      );
+      await initializeWorkspace(
+        projectRoot,
+        option(args, "--teach") ?? "main",
+        wechatAccount,
+      );
       await installAgentIntegrations(projectRoot, tools, CLI_VERSION);
       process.stdout.write("Learning Project, initial Teach, and Agent Integrations created.\n");
       if (process.env.npm_command === "exec") {
@@ -252,10 +295,7 @@ export async function main(args: string[]): Promise<number> {
       const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
-      const userConfigDir =
-        process.env.XDG_CONFIG_HOME ??
-        `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
-      await resolveConfig({ cwd: configRoot, userConfigDir });
+      await resolveConfig({ cwd: configRoot, userConfigDir: userConfigDir() });
       await validateLessonBundles(workspaceRoot);
       process.stdout.write("Teach is valid.\n");
       return 0;
@@ -264,12 +304,9 @@ export async function main(args: string[]): Promise<number> {
       const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
-      const userConfigDir =
-        process.env.XDG_CONFIG_HOME ??
-        `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
       const config = await resolveConfig({
         cwd: configRoot,
-        userConfigDir,
+        userConfigDir: userConfigDir(),
       });
       const output = await renderWeb(workspaceRoot, config.output_dir);
       process.stdout.write(`Web course rendered to ${output}\n`);
@@ -291,10 +328,7 @@ export async function main(args: string[]): Promise<number> {
       const workspaceRoot = await resolveTeach(args);
       await assertWorkspaceIsCurrent(workspaceRoot);
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
-      const userConfigDir =
-        process.env.XDG_CONFIG_HOME ??
-        `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
-      const config = await resolveConfig({ cwd: configRoot, userConfigDir });
+      const config = await resolveConfig({ cwd: configRoot, userConfigDir: userConfigDir() });
       const output = brief
         ? await renderPptFromBrief(workspaceRoot, brief, config.output_dir)
         : await renderPpt(workspaceRoot, lesson as string, config.output_dir, option(args, "--theme"));
@@ -358,12 +392,9 @@ export async function main(args: string[]): Promise<number> {
           "Run k-teach wechat render --brief <id>.",
         );
       }
-      const userConfigDir =
-        process.env.XDG_CONFIG_HOME ??
-        `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
       const config = await resolveConfig({
         cwd: configRoot,
-        userConfigDir,
+        userConfigDir: userConfigDir(),
       });
       const output = args[1] === "render-proposals"
         ? await renderWechatProposals(workspaceRoot, brief, config.output_dir)
@@ -374,10 +405,7 @@ export async function main(args: string[]): Promise<number> {
     if (command === "doctor" && args[1] === "wechat") {
       const workspaceRoot = await resolveTeach(args);
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
-      const userConfigDir =
-        process.env.XDG_CONFIG_HOME ??
-        `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
-      const config = await resolveConfig({ cwd: configRoot, userConfigDir });
+      const config = await resolveConfig({ cwd: configRoot, userConfigDir: userConfigDir() });
       const account = await resolveWechatAccountAlias(option(args, "--account"), config.wechat_account);
       const report = await doctorWechat(await publisherOptions(workspaceRoot, account));
       process.stdout.write(`${JSON.stringify(report)}\n`);
@@ -388,10 +416,7 @@ export async function main(args: string[]): Promise<number> {
       await assertWorkspaceIsCurrent(workspaceRoot);
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const brief = option(args, "--brief");
-      const userConfigDir =
-        process.env.XDG_CONFIG_HOME ??
-        `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
-      const config = await resolveConfig({ cwd: configRoot, userConfigDir });
+      const config = await resolveConfig({ cwd: configRoot, userConfigDir: userConfigDir() });
       if (!brief) {
         throw new KTeachError(
           "validation-failed",
@@ -483,12 +508,9 @@ export async function main(args: string[]): Promise<number> {
       const parsedPort =
         portIndex >= 0 ? Number(args[portIndex + 1]) : Number.NaN;
       const port = Number.isInteger(parsedPort) ? parsedPort : 4173;
-      const userConfigDir =
-        process.env.XDG_CONFIG_HOME ??
-        `${process.env.HOME ?? process.cwd()}/.config/k-teach`;
       const config = await resolveConfig({
         cwd: configRoot,
-        userConfigDir,
+        userConfigDir: userConfigDir(),
       });
       const teaches = projectPreview
         ? await listTeaches(projectRoot)
