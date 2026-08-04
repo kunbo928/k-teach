@@ -1,6 +1,6 @@
 {
   "name": "k-teach",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Cross-platform Agent Skill and deterministic CLI for persistent teaching, Web Lessons, diagrams, and channel artifacts.",
   "type": "module",
   "bin": {

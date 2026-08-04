@@ -1,5 +1,11 @@
 # k-teach
 
+## 0.6.0
+
+### Minor Changes
+
+- 88fb48f: Bind a registered WeChat account as the project default during `k-teach init`, with explicit non-interactive account selection for multi-account setups and native Windows, macOS, and Linux user paths.
+
 ## 0.5.0
 
 ### Minor Changes
