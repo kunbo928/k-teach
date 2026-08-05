@@ -1,0 +1,64 @@
+name: GitHub Release
+
+# Triggers on every new version tag. K Teach history uses `v*` tags;
+# changesets (with no custom tagFormat) pushes `k-teach@*`. Both must
+# produce a GitHub Release so the Releases sidebar tracks npm.
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'k-teach@*'
+
+permissions:
+  contents: write
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract CHANGELOG section for this version
+        id: extract
+        run: |
+          TAG="${{ github.ref_name }}"
+          # Normalize tag to bare semver: v1.2.3 -> 1.2.3, k-teach@1.2.3 -> 1.2.3
+          VERSION="${TAG#v}"
+          VERSION="${VERSION#k-teach@}"
+          {
+            echo "version=$VERSION"
+            echo "tag=$TAG"
+          } >> "$GITHUB_OUTPUT"
+
+          awk -v ver="$VERSION" '
+            BEGIN { capture = 0 }
+            /^## / {
+              if (capture) exit
+              if ($0 == "## " ver) { capture = 1; next }
+            }
+            capture { print }
+          ' CHANGELOG.md > release_body.md
+
+          if [ ! -s release_body.md ]; then
+            {
+              echo "## Changes"
+              echo ""
+              echo "_No CHANGELOG.md entry was found for this version._"
+              echo "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/$TAG/CHANGELOG.md) for details."
+            } > release_body.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ steps.extract.outputs.version }}
+          body_path: release_body.md
+          fail_on_unmatched_files: true
+          # Tag is already pushed by the publisher (changesets or manual),
+          # so we just attach the release to the existing tag.
