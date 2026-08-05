@@ -26,7 +26,6 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-          package-manager-cache: false
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Verify source
