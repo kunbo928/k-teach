@@ -148,6 +148,14 @@ k-teach init --tools codex,claude --teach mathematics
 k-teach teach create photography
 ```
 
+Detected Agents are pre-selected in the interactive prompt. Pass `--yes` (or
+`-y`) to skip the prompt and install to every detected Agent without choosing.
+The Skill is installed once as the canonical copy under `.agents/skills/k-teach`
+(the location read by Codex, Cursor, Gemini CLI, OpenCode, and GitHub Copilot),
+and every other Agent gets a symlink to that copy. Pass `--copy` to materialize
+independent copies instead of symlinks when symlinks are unsupported. WorkBuddy
+is detected automatically whenever `.workbuddy` is present.
+
 If exactly one user-level WeChat account is registered, `init` records its
 alias as `wechat_account` in `.k-teach/config.yaml`. With multiple registered
 accounts, interactive `init` asks once for the project default; in a

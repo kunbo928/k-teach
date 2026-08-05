@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import {
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
+  readlink,
   stat,
   writeFile,
 } from "node:fs/promises";
@@ -144,6 +146,7 @@ test("tools reports the complete Agent matrix from the pinned OpenSpec snapshot"
     "trae",
     "windsurf",
     "zcode",
+    "workbuddy",
   ];
 
   const result = await runCli(["tools", "--json"], project);
@@ -245,4 +248,68 @@ test("npx init explains that persistent Agent use needs the global CLI", async (
 
   assert.equal(result.exitCode, 0);
   assert.match(result.stdout, /npm install -g k-teach@latest/);
+});
+
+test("init --yes installs detected Agents through .agents/skills canonical symlinks", async () => {
+  const project = await mkdtemp(path.join(tmpdir(), "k-teach-yes-"));
+  await mkdir(path.join(project, ".codex"));
+
+  const result = await runCli(["init", "--yes"], project);
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  const canonical = path.join(project, ".agents", "skills", "k-teach", "SKILL.md");
+  assert.equal((await stat(canonical)).isFile(), true);
+  const link = path.join(project, ".codex", "skills", "k-teach");
+  assert.equal((await lstat(link)).isSymbolicLink(), true);
+  assert.equal(
+    path.normalize(await readlink(link)),
+    path.normalize("../../.agents/skills/k-teach"),
+  );
+  assert.equal(
+    await readFile(path.join(link, "SKILL.md"), "utf8"),
+    await readFile(canonical, "utf8"),
+  );
+});
+
+test("init --copy materializes independent copies instead of symlinks", async () => {
+  const project = await mkdtemp(path.join(tmpdir(), "k-teach-copy-"));
+  await mkdir(path.join(project, ".codex"));
+
+  const result = await runCli(["init", "--tools", "codex", "--copy"], project);
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  const link = path.join(project, ".codex", "skills", "k-teach");
+  assert.equal((await lstat(link)).isSymbolicLink(), false);
+  assert.equal((await stat(path.join(link, "SKILL.md"))).isFile(), true);
+  assert.equal(
+    (await stat(path.join(project, ".agents", "skills", "k-teach", "SKILL.md"))).isFile(),
+    true,
+  );
+});
+
+test("init --yes detects WorkBuddy when .workbuddy exists", async () => {
+  const project = await mkdtemp(path.join(tmpdir(), "k-teach-wb-"));
+  await mkdir(path.join(project, ".workbuddy"));
+
+  const result = await runCli(["init", "--yes"], project);
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  const link = path.join(project, ".workbuddy", "skills", "k-teach");
+  assert.equal((await lstat(link)).isSymbolicLink(), true);
+  assert.equal(
+    path.normalize(await readlink(link)),
+    path.normalize("../../.agents/skills/k-teach"),
+  );
+  assert.equal((await stat(path.join(link, "SKILL.md"))).isFile(), true);
+});
+
+test("canonical Skill under .agents/skills carries references and agents", async () => {
+  const project = await mkdtemp(path.join(tmpdir(), "k-teach-canon-"));
+  await mkdir(path.join(project, ".codex"));
+
+  const result = await runCli(["init", "--tools", "codex"], project);
+  assert.equal(result.exitCode, 0, result.stderr);
+  const canonical = path.join(project, ".agents", "skills", "k-teach");
+  assert.equal((await stat(path.join(canonical, "references"))).isDirectory(), true);
+  assert.equal((await stat(path.join(canonical, "agents"))).isDirectory(), true);
 });
