@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createReadStream, watch as fsWatch,                } from "node:fs";
 import { access, chmod, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer,                     } from "node:http";
 import path from "node:path";
@@ -121,36 +121,21 @@ async function sendFile(root        , requestPath        , response             
   }
 }
 
-function previewPlugin(options                       , instanceId        )         {
+function previewPlugin(
+  options                       ,
+  instanceId        ,
+  state                                                     ,
+)         {
   const teaches = new Map(options.teaches.map((teach) => [teach.id, teach]));
-  let revision = 0;
-  let lastError                    ;
-  let pending                                           ;
   return {
     name: "k-teach-preview-runtime",
     configureServer(server) {
-      const changed = (file        ) => {
-        if (file.includes(`${path.sep}.k-teach${path.sep}output${path.sep}`) || file.includes(`${path.sep}.git${path.sep}`)) return;
-        if (pending) clearTimeout(pending);
-        pending = setTimeout(() => {
-          void (options.onInputChange?.(file) ?? Promise.resolve()).then(() => {
-            lastError = undefined;
-            revision += 1;
-          }).catch((error) => {
-            lastError = error instanceof Error ? error.message : String(error);
-            revision += 1;
-          });
-        }, 160);
-      };
-      server.watcher.on("add", changed);
-      server.watcher.on("change", changed);
-      server.watcher.on("unlink", changed);
       server.middlewares.use(async (request, response, next) => {
         const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
         if (pathname === "/__k_teach/health") {
           const projectExists = await access(options.projectRoot).then(() => true, () => false);
           response.writeHead(projectExists ? 200 : 410, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-          response.end(JSON.stringify({ service: "k-teach-preview", instance_id: instanceId, project_root: path.resolve(options.projectRoot), project_exists: projectExists, routes: options.teaches.map((teach) => teach.id), revision, last_error: lastError }));
+          response.end(JSON.stringify({ service: "k-teach-preview", instance_id: instanceId, project_root: path.resolve(options.projectRoot), project_exists: projectExists, routes: options.teaches.map((teach) => teach.id), revision: state.revision, last_error: state.lastError }));
           return;
         }
         if (pathname === "/") {
@@ -191,6 +176,45 @@ function previewPlugin(options                       , instanceId        )      
       });
     },
   };
+}
+
+// We intentionally do not use vite's built-in chokidar watcher here. On
+// Windows + Node 24 / libuv 2.x, a chokidar watcher aborts the process with
+// a libuv "_wcsnicmp" assertion when a watched directory is removed or
+// renamed (the fs-event handle fires after the directory it was rooted at
+// is gone). The native fs.watch watcher emits an "error" event instead of
+// aborting, so the "preview exits diagnostically when its temporary project
+// root disappears" test can complete without bringing the runner down.
+function startInputWatcher(
+  options                       ,
+  state                                                     ,
+)            {
+  let pending                                           ;
+  const trigger = (absoluteFile        ) => {
+    const outputMarker = path.sep + ".k-teach" + path.sep + "output" + path.sep;
+    const gitMarker = path.sep + ".git" + path.sep;
+    if (absoluteFile.includes(outputMarker)) return;
+    if (absoluteFile.includes(gitMarker)) return;
+    if (pending) clearTimeout(pending);
+    pending = setTimeout(() => {
+      void (options.onInputChange?.(absoluteFile) ?? Promise.resolve()).then(() => {
+        state.lastError = undefined;
+        state.revision += 1;
+      }).catch((error         ) => {
+        state.lastError = error instanceof Error ? error.message : String(error);
+        state.revision += 1;
+      });
+    }, 160);
+  };
+  const watcher = fsWatch(options.projectRoot, { recursive: true, persistent: false }, (_event, filename) => {
+    if (!filename) return;
+    const absolute = path.isAbsolute(filename) ? filename : path.join(options.projectRoot, filename.toString());
+    trigger(absolute);
+  });
+  // On Windows, a deleted/renamed root dir fires an "error" event instead of aborting.
+  // Swallow it; the root monitor in startPreviewRuntime handles shutdown.
+  watcher.on("error", () => {});
+  return watcher;
 }
 
 async function probe(port        , host        )                                               {
@@ -263,6 +287,7 @@ export async function startPreviewRuntime(options                       )       
   const closed = new Promise                              ((resolve) => { resolveClosed = resolve; });
   let closing                           ;
   let vite                           ;
+  const runtimeState                                                      = { revision: 0, lastError: undefined };
   const http = createHttpServer((request, response) => vite?.middlewares(request, response, () => {
     response.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
     response.end(errorPage("预览路由不存在", request.url ?? "/", "返回项目预览首页选择已有产物。"));
@@ -274,15 +299,21 @@ export async function startPreviewRuntime(options                       )       
     cacheDir: path.join(options.cacheDir ?? userCacheDir({ cwd: options.projectRoot }), "vite"),
     root: options.projectRoot,
     logLevel: "silent",
-    plugins: [previewPlugin(options, instanceId)],
-    server: { middlewareMode: true, hmr: false, watch: { ignored: ["**/.git/**"] } },
+    plugins: [previewPlugin(options, instanceId, runtimeState)],
+    // watch: null makes vite use its built-in NoopWatcher (no fs watching).
+    // We watch the project root ourselves with node:fs (see startInputWatcher)
+    // because chokidar (vite's default watcher) aborts the process on Windows
+    // when a watched directory is removed or renamed mid-run.
+    server: { middlewareMode: true, hmr: false, watch: null },
   });
+  const fsWatcher = startInputWatcher(options, runtimeState);
   try {
     await new Promise      ((resolve, reject) => {
       http.once("error", reject);
       http.listen(selectedPort, options.host, resolve);
     });
   } catch (error) {
+    fsWatcher.close();
     await vite.close();
     throw error;
   }
@@ -291,6 +322,7 @@ export async function startPreviewRuntime(options                       )       
   const url = `http://${options.host}:${address.port}/`;
   const health = await fetch(new URL("__k_teach/health", url));
   if (!health.ok) {
+    fsWatcher.close();
     await vite.close();
     http.close();
     throw new Error(`Preview health check failed with HTTP ${health.status}.`);
@@ -300,6 +332,11 @@ export async function startPreviewRuntime(options                       )       
     if (closing) return closing;
     closing = (async () => {
       clearInterval(rootMonitor);
+      // Close the native fs watcher first so any pending ReadDirectoryChangesW
+      // callbacks are dropped before vite tears down. On Windows, chokidar would
+      // abort the process here; node:fs instead emits an error event that we
+      // already swallow above.
+      fsWatcher.close();
       await vite?.close();
       await new Promise      ((resolve, reject) => http.close((error) => error ? reject(error) : resolve()));
       resolveClosed(reason);

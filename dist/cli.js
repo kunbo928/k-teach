@@ -57,7 +57,7 @@ async function validateStagedArtifact(output        , manifestName        )     
   for (const file of manifest.files) await access(path.join(output, file));
 }
 
-export const CLI_VERSION = "0.6.0";
+export const CLI_VERSION = "1.0.0";
 
 async function chooseTools(
   projectRoot        ,
