@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-mode="night">
+<html lang="en" data-mode="night">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>K Teach · Field Manual — 让任何 AI 智能体成为持久的老师</title>
-<meta name="description" content="K Teach 是一个平台中立的开源 Agent Skill + 确定性 CLI。基于 Field Manual 设计语言：编辑式手册、纸面节奏、细线层级、克制绿、低动效。" />
+<title>K Teach · Field Manual</title>
+<meta name="description" content="K Teach is a platform-neutral open-source Agent Skill + deterministic CLI. Built on the Field Manual design language: editorial handbook, paper reading rhythm, fine-line hierarchy, restrained green, low motion." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -248,18 +248,22 @@
     <div class="wrap row">
       <a href="#top" class="brand"><span class="k">K Teach</span><span class="tag">Field Manual</span></a>
       <nav class="nav">
-        <a href="#features">特性</a>
-        <a href="#loop">教学循环</a>
-        <a href="#outputs">多端输出</a>
-        <a href="#tech">技术栈</a>
-        <a href="#install">快速开始</a>
+        <a href="#features" data-i18n="nav.features">Features</a>
+        <a href="#loop" data-i18n="nav.loop">Teaching Loop</a>
+        <a href="#outputs" data-i18n="nav.outputs">Outputs</a>
+        <a href="#tech" data-i18n="nav.tech">Tech Stack</a>
+        <a href="#install" data-i18n="nav.install">Quick Start</a>
       </nav>
       <div class="mast-right">
         <a class="gh" href="https://github.com/kunbo928/k-teach" target="_blank" rel="noopener">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
           GitHub
         </a>
-        <button class="mode-toggle" id="modeToggle" aria-label="切换纸面 / 夜间模式">
+        <button class="mode-toggle" id="langToggle" aria-label="Switch language">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+          <span id="langLabel">EN</span>
+        </button>
+        <button class="mode-toggle" id="modeToggle" aria-label="Toggle paper / night mode" data-aria-i18n="mode.aria">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
           <span id="modeLabel">Night</span>
         </button>
@@ -273,15 +277,15 @@
       <div class="meta reveal">
         <span>Open Source · MIT</span><span>Platform-Neutral</span><span>Deterministic CLI</span><span>Node ≥ 22.18</span>
       </div>
-      <h1 class="reveal">把任意 AI 智能体<br>变成<span class="u">持久、使命驱动</span>的老师</h1>
-      <p class="intro reveal">K Teach 是一个遵循开放 Agent Skills 格式的开源技能 + 确定性 CLI。它用结构化教学循环、Lesson Bundle 单源机制和跨会话证据追踪，让 AI 真正「教会」你，而不只是回答你。</p>
+      <h1 class="reveal" data-i18n="hero.h1">Turn any AI agent<br>into a <span class="u">persistent, mission-driven</span> teacher</h1>
+      <p class="intro reveal" data-i18n="hero.intro">K Teach is an open-source skill and deterministic CLI that follows the open Agent Skills format. It uses a structured teaching loop, a single-source Lesson Bundle mechanism, and cross-session evidence tracking to make AI truly teach you — not just answer you.</p>
       <div class="cta-row reveal">
-        <a class="btn solid" href="#install">⚡ 立即开始</a>
-        <a class="btn outline" href="https://github.com/kunbo928/k-teach" target="_blank" rel="noopener">在 GitHub 查看</a>
+        <a class="btn solid" href="#install" data-i18n="cta.start">⚡ Get Started</a>
+        <a class="btn outline" href="https://github.com/kunbo928/k-teach" target="_blank" rel="noopener" data-i18n="cta.github">View on GitHub</a>
       </div>
 
       <div class="excerpt reveal">
-        <div class="cap"><span>Manual Excerpt — 01 · 初始化</span><span>bash</span></div>
+        <div class="cap"><span data-i18n="excerpt.cap">Manual Excerpt — 01 · Initialize</span><span>bash</span></div>
         <pre><span class="p">$</span> <span class="c">npm install -g k-teach@latest</span>
 <span class="o">✓ installed k-teach 1.x</span>
 
@@ -298,10 +302,10 @@
   <section>
     <div class="wrap sec-pad">
       <div class="stats reveal">
-        <div class="s"><div class="n"><em>3</em></div><div class="l">端输出：Web · PPT · 公众号</div></div>
-        <div class="s"><div class="n">∞</div><div class="l">跨会话保留使命与证据</div></div>
-        <div class="s"><div class="n"><em>1</em></div><div class="l">Lesson Bundle 单源</div></div>
-        <div class="s"><div class="n"><em>0</em></div><div class="l">凭据入库 · 默认私有</div></div>
+        <div class="s"><div class="n"><em>3</em></div><div class="l" data-i18n="stat.1">Channel outputs: Web · PPT · WeChat</div></div>
+        <div class="s"><div class="n">∞</div><div class="l" data-i18n="stat.2">Mission &amp; evidence across sessions</div></div>
+        <div class="s"><div class="n"><em>1</em></div><div class="l" data-i18n="stat.3">Single-source Lesson Bundle</div></div>
+        <div class="s"><div class="n"><em>0</em></div><div class="l" data-i18n="stat.4">No secrets stored · private by default</div></div>
       </div>
     </div>
   </section>
@@ -309,16 +313,16 @@
   <!-- FEATURES -->
   <section id="features">
     <div class="wrap sec-pad">
-      <div class="reveal"><div class="kicker"><span class="num">§01</span> 核心特性 <span class="line"></span></div></div>
-      <h2 class="title reveal">不只是「回答」，<br>而是「教会」</h2>
-      <p class="lede reveal">K Teach 把教学拆成可验证、可追踪、可复现的环节，让 AI 老师像人类老师一样有使命、有节奏、有证据。</p>
+      <div class="reveal"><div class="kicker"><span class="num">§01</span> <span data-i18n="feat.kicker">Core Features</span> <span class="line"></span></div></div>
+      <h2 class="title reveal" data-i18n="feat.title">Not just answers,<br>but teaching</h2>
+      <p class="lede reveal" data-i18n="feat.lede">K Teach breaks teaching into verifiable, traceable, reproducible steps, so the AI teacher has a mission, a rhythm, and evidence — like a human teacher.</p>
       <div class="feature-grid reveal">
-        <div class="feat"><div class="idx">F.01</div><h3>使命驱动教学</h3><p>先确立可观测的学习使命与成功标准，再围绕它设计每节「最小有用挑战」。</p></div>
-        <div class="feat"><div class="idx">F.02</div><h3>Lesson Bundle 单源</h3><p>讲解、练习、反馈、检索规则统一存为权威源；渠道产物只能由它派生。</p></div>
-        <div class="feat"><div class="idx">F.03</div><h3>证据驱动学习</h3><p>仅当学习者解释、检索、应用、迁移或纠正时，才记录「已论证学习」。</p></div>
-        <div class="feat"><div class="idx">F.04</div><h3>跨会话持久</h3><p>学习工作空间跨会话保留使命、内容、证据与教学决策，续上进度继续教。</p></div>
-        <div class="feat"><div class="idx">F.05</div><h3>严格安全边界</h3><p>凭据不入库、本地课程默认私有、公开发布需确认、产物发布后不可变。</p></div>
-        <div class="feat"><div class="idx">F.06</div><h3>平台中立</h3><p>SKILL.md 是平台中立契约，Codex / ChatGPT / Claude / 任意智能体共用。</p></div>
+        <div class="feat"><div class="idx">F.01</div><h3 data-i18n="f.01.t">Mission-driven teaching</h3><p data-i18n="f.01.d">Establish an observable learning mission and success criteria first, then design each "smallest useful challenge" around it.</p></div>
+        <div class="feat"><div class="idx">F.02</div><h3 data-i18n="f.02.t">Single-source Lesson Bundle</h3><p data-i18n="f.02.d">Explanations, exercises, feedback, and retrieval rules are stored as one authoritative source; channel outputs are only derived from it.</p></div>
+        <div class="feat"><div class="idx">F.03</div><h3 data-i18n="f.03.t">Evidence-driven learning</h3><p data-i18n="f.03.d">We only record "demonstrated learning" when the learner explains, retrieves, applies, transfers, or corrects.</p></div>
+        <div class="feat"><div class="idx">F.04</div><h3 data-i18n="f.04.t">Persistent across sessions</h3><p data-i18n="f.04.d">The learning workspace keeps the mission, content, evidence, and teaching decisions across sessions — pick up where you left off.</p></div>
+        <div class="feat"><div class="idx">F.05</div><h3 data-i18n="f.05.t">Strict safety boundaries</h3><p data-i18n="f.05.d">No credentials in storage, local lessons private by default, public publishing requires confirmation, artifacts immutable after release.</p></div>
+        <div class="feat"><div class="idx">F.06</div><h3 data-i18n="f.06.t">Platform-neutral</h3><p data-i18n="f.06.d">SKILL.md is a platform-neutral contract shared by Codex / ChatGPT / Claude / any agent.</p></div>
       </div>
     </div>
   </section>
@@ -326,18 +330,18 @@
   <!-- TEACHING LOOP -->
   <section id="loop">
     <div class="wrap sec-pad">
-      <div class="reveal"><div class="kicker"><span class="num">§02</span> 教学循环 <span class="line"></span></div></div>
-      <h2 class="title reveal">一个完整、可循环的教学闭环</h2>
-      <p class="lede reveal">从使命到证据，八步紧凑循环。每一步都可被 CLI 验证、被 Lesson Bundle 追溯。</p>
+      <div class="reveal"><div class="kicker"><span class="num">§02</span> <span data-i18n="loop.kicker">Teaching Loop</span> <span class="line"></span></div></div>
+      <h2 class="title reveal" data-i18n="loop.title">A complete, repeatable teaching loop</h2>
+      <p class="lede reveal" data-i18n="loop.lede">From mission to evidence, an eight-step tight loop. Each step is verifiable by the CLI and traceable to the Lesson Bundle.</p>
       <div class="loop reveal">
-        <div class="step"><div class="no">01</div><div class="body"><h4>确立学习使命</h4><p>定义具体目标与可观测的成功标准，让教学有方向。</p><span class="tag">Mission</span></div></div>
-        <div class="step"><div class="no">02</div><div class="body"><h4>评估先验与偏好</h4><p>检查已有知识、学习记录、可信来源与学习习惯。</p><span class="tag">Assess</span></div></div>
-        <div class="step"><div class="no">03</div><div class="body"><h4>选取最小有用挑战</h4><p>选择略高于当前水平、又能即刻上手的任务。</p><span class="tag">Challenge</span></div></div>
-        <div class="step"><div class="no">04</div><div class="body"><h4>基于可信源核实事实</h4><p>从权威原始来源校验每一个事实声明，杜绝编造。</p><span class="tag">Verify</span></div></div>
-        <div class="step"><div class="no">05</div><div class="body"><h4>构建 Lesson Bundle</h4><p>聚焦单课能力：激活先验 → 精讲 → 实践 → 反馈 → 无回顾检索。</p><span class="tag">Bundle</span></div></div>
-        <div class="step"><div class="no">06</div><div class="body"><h4>选择教学媒介</h4><p>文本、确定性 SVG 图表，或可选生成式视觉，按需组合。</p><span class="tag">Media</span></div></div>
-        <div class="step"><div class="no">07</div><div class="body"><h4>判定用途并生成</h4><p>意图不明先问清：学习 / 微信 / PPT，三者各自独立派生。</p><span class="tag">Generate</span></div></div>
-        <div class="step"><div class="no">08</div><div class="body"><h4>记录已论证学习</h4><p>把证据写回学习记录，驱动下一轮内容选择，循环继续。</p><span class="tag">Evidence</span></div></div>
+        <div class="step"><div class="no">01</div><div class="body"><h4 data-i18n="s.01.t">Set the learning mission</h4><p data-i18n="s.01.d">Define concrete goals and observable success criteria so teaching has direction.</p><span class="tag">Mission</span></div></div>
+        <div class="step"><div class="no">02</div><div class="body"><h4 data-i18n="s.02.t">Assess prior knowledge &amp; preferences</h4><p data-i18n="s.02.d">Check existing knowledge, learning records, trusted sources, and study habits.</p><span class="tag">Assess</span></div></div>
+        <div class="step"><div class="no">03</div><div class="body"><h4 data-i18n="s.03.t">Pick the smallest useful challenge</h4><p data-i18n="s.03.d">Choose a task slightly above the current level that you can start right away.</p><span class="tag">Challenge</span></div></div>
+        <div class="step"><div class="no">04</div><div class="body"><h4 data-i18n="s.04.t">Verify facts against trusted sources</h4><p data-i18n="s.04.d">Validate every factual claim against authoritative primary sources — no fabrication.</p><span class="tag">Verify</span></div></div>
+        <div class="step"><div class="no">05</div><div class="body"><h4 data-i18n="s.05.t">Build the Lesson Bundle</h4><p data-i18n="s.05.d">Focus on a single lesson's capability: activate prior knowledge → explain → practice → feedback → retrieval without looking back.</p><span class="tag">Bundle</span></div></div>
+        <div class="step"><div class="no">06</div><div class="body"><h4 data-i18n="s.06.t">Choose teaching media</h4><p data-i18n="s.06.d">Text, deterministic SVG diagrams, or optional generated visuals — combine as needed.</p><span class="tag">Media</span></div></div>
+        <div class="step"><div class="no">07</div><div class="body"><h4 data-i18n="s.07.t">Resolve intent &amp; generate</h4><p data-i18n="s.07.d">When intent is unclear, ask first: learning / WeChat / PPT — each derived independently.</p><span class="tag">Generate</span></div></div>
+        <div class="step"><div class="no">08</div><div class="body"><h4 data-i18n="s.08.t">Record demonstrated learning</h4><p data-i18n="s.08.d">Write evidence back to the learning record to drive the next round of content choices — the loop continues.</p><span class="tag">Evidence</span></div></div>
       </div>
     </div>
   </section>
@@ -345,27 +349,27 @@
   <!-- OUTPUTS -->
   <section id="outputs">
     <div class="wrap sec-pad">
-      <div class="reveal"><div class="kicker"><span class="num">§03</span> 多端输出 <span class="line"></span></div></div>
-      <h2 class="title reveal">同一份课程，三端同生</h2>
-      <p class="lede reveal">Web 课程、HTML PPT、公众号文章都从同一个 Lesson Bundle 确定性派生，事实一致、来源可追溯。</p>
+      <div class="reveal"><div class="kicker"><span class="num">§03</span> <span data-i18n="out.kicker">Multi-channel Output</span> <span class="line"></span></div></div>
+      <h2 class="title reveal" data-i18n="out.title">One course, three outputs</h2>
+      <p class="lede reveal" data-i18n="out.lede">Web lessons, HTML presentations, and WeChat articles are all deterministically derived from the same Lesson Bundle — consistent facts, traceable sources.</p>
       <div class="out-grid reveal">
         <div class="out">
           <span class="chip">WEB</span>
-          <h3>Web 课程</h3>
-          <p>本地静态学习网站，每节课可独立打开，含练习与检索检查。</p>
-          <ul><li>完整学习体验，离线可用</li><li>7 套 Teaching Themes 可切换</li><li>paper / night / print 显示模式</li></ul>
+          <h3 data-i18n="out.web.t">Web Lessons</h3>
+          <p data-i18n="out.web.d">A local static learning site; every lesson opens independently, with exercises and retrieval checks.</p>
+          <ul><li data-i18n="out.web.1">Complete learning experience, offline-ready</li><li data-i18n="out.web.2">7 switchable Teaching Themes</li><li data-i18n="out.web.3">paper / night / print display modes</li></ul>
         </div>
         <div class="out">
           <span class="chip">PPT</span>
-          <h3>HTML 演示</h3>
-          <p>从 Presentation Brief 派生，含键盘导航与讲者备注。</p>
-          <ul><li>课堂教学 / 讲座分享双用途</li><li>键盘导航 + 讲者备注</li><li>与 Web 共享视觉主题</li></ul>
+          <h3 data-i18n="out.ppt.t">HTML Presentation</h3>
+          <p data-i18n="out.ppt.d">Derived from a Presentation Brief, with keyboard navigation and presenter notes.</p>
+          <ul><li data-i18n="out.ppt.1">Classroom teaching / talk dual use</li><li data-i18n="out.ppt.2">Keyboard navigation + presenter notes</li><li data-i18n="out.ppt.3">Shares visual themes with Web</li></ul>
         </div>
         <div class="out">
           <span class="chip">WX</span>
-          <h3>公众号文章</h3>
-          <p>从 Publication Brief 派生，需显式授权，平台安全表达。</p>
-          <ul><li>独立 Channel Theme</li><li>草稿 / 预览 / 发布状态机</li><li>不含练习，保持平台合规</li></ul>
+          <h3 data-i18n="out.wx.t">WeChat Article</h3>
+          <p data-i18n="out.wx.d">Derived from a Publication Brief, requires explicit authorization, platform-safe expression.</p>
+          <ul><li data-i18n="out.wx.1">Independent Channel Theme</li><li data-i18n="out.wx.2">Draft / preview / publish state machine</li><li data-i18n="out.wx.3">No exercises, stays platform-compliant</li></ul>
         </div>
       </div>
     </div>
@@ -374,17 +378,17 @@
   <!-- TECH -->
   <section id="tech">
     <div class="wrap sec-pad">
-      <div class="reveal"><div class="kicker"><span class="num">§04</span> 技术栈 <span class="line"></span></div></div>
-      <h2 class="title reveal">为可复现而生</h2>
-      <p class="lede reveal">TypeScript 源码、确定性 CLI、开放 Agent Skills 格式——稳定、可校验、易发布。</p>
+      <div class="reveal"><div class="kicker"><span class="num">§04</span> <span data-i18n="tech.kicker">Tech Stack</span> <span class="line"></span></div></div>
+      <h2 class="title reveal" data-i18n="tech.title">Built for reproducibility</h2>
+      <p class="lede reveal" data-i18n="tech.lede">TypeScript source, deterministic CLI, open Agent Skills format — stable, verifiable, easy to publish.</p>
       <div class="tech-grid reveal">
         <div class="tech"><span class="k">⌘</span> TypeScript</div>
         <div class="tech"><span class="k">⬢</span> Node.js ≥ 22.18</div>
         <div class="tech"><span class="k">⚡</span> pnpm</div>
-        <div class="tech"><span class="k">▲</span> Vite 预览</div>
+        <div class="tech"><span class="k">▲</span> Vite preview</div>
         <div class="tech"><span class="k">⎘</span> Open Agent Skills</div>
         <div class="tech"><span class="k">{}</span> JSON CLI</div>
-        <div class="tech"><span class="k">📦</span> npm 分发</div>
+        <div class="tech"><span class="k">📦</span> npm distribution</div>
         <div class="tech"><span class="k">🔁</span> Changesets</div>
       </div>
     </div>
@@ -393,30 +397,30 @@
   <!-- INSTALL -->
   <section id="install">
     <div class="wrap sec-pad">
-      <div class="reveal"><div class="kicker"><span class="num">§05</span> 快速开始 <span class="line"></span></div></div>
-      <h2 class="title reveal">三行命令，开启学习项目</h2>
-      <p class="lede reveal">全局安装持久 CLI，初始化 Learning Project，即可让 AI 接管教学。</p>
+      <div class="reveal"><div class="kicker"><span class="num">§05</span> <span data-i18n="install.kicker">Quick Start</span> <span class="line"></span></div></div>
+      <h2 class="title reveal" data-i18n="install.title">Three commands to start a learning project</h2>
+      <p class="lede reveal" data-i18n="install.lede">Install the persistent CLI globally, initialize a Learning Project, and let AI take over the teaching.</p>
       <div class="install reveal">
         <div class="codebox">
-          <div class="cap"><span>bash</span><button class="copy-btn" data-copy="npm install -g k-teach@latest&#10;k-teach init --tools codex,claude --teach mathematics">复制</button></div>
-          <pre><span class="g"># 1. 全局安装持久 CLI</span>
+          <div class="cap"><span>bash</span><button class="copy-btn" data-copy="npm install -g k-teach@latest&#10;k-teach init --tools codex,claude --teach mathematics" data-i18n="copy">Copy</button></div>
+          <pre><span class="g" data-i18n="code.c1"># 1. Install the persistent CLI globally</span>
 <span class="c">npm install -g k-teach@latest</span>
 
-<span class="g"># 2. 进入学习项目并初始化</span>
+<span class="g" data-i18n="code.c2"># 2. Enter your project and initialize</span>
 <span class="c">cd your-learning-project</span>
 <span class="c">k-teach init</span>
 
-<span class="g"># 3. 指定 Agent 与首门 Teach（可选）</span>
+<span class="g" data-i18n="code.c3"># 3. Specify agents and first Teach (optional)</span>
 <span class="c">k-teach init --tools codex,claude --teach mathematics</span>
 
-<span class="g"># 本地预览（仅绑定 127.0.0.1）</span>
+<span class="g" data-i18n="code.c4"># Local preview (binds 127.0.0.1 only)</span>
 <span class="c">k-teach preview --open</span></pre>
         </div>
         <div class="steps">
-          <div class="step-item"><div class="n">①</div><div><b>安装 CLI</b><br><span>全局安装 k-teach，获得确定性命令与预览能力。</span></div></div>
-          <div class="step-item"><div class="n">②</div><div><b>初始化项目</b><br><span>生成 .k-teach/config.yaml、teachs/ 集合与初始 Teach。</span></div></div>
-          <div class="step-item"><div class="n">③</div><div><b>接入 Agent</b><br><span>从同一份权威 Skill 生成各平台入口。</span></div></div>
-          <div class="step-item"><div class="n">④</div><div><b>开始教学</b><br><span>对 Agent 说：「用 K Teach 帮我学分布式系统」。</span></div></div>
+          <div class="step-item"><div class="n">①</div><div><b data-i18n="step.1.t">Install CLI</b><br><span data-i18n="step.1.d">Install k-teach globally to get deterministic commands and preview.</span></div></div>
+          <div class="step-item"><div class="n">②</div><div><b data-i18n="step.2.t">Initialize project</b><br><span data-i18n="step.2.d">Generate .k-teach/config.yaml, the teachs/ collection, and an initial Teach.</span></div></div>
+          <div class="step-item"><div class="n">③</div><div><b data-i18n="step.3.t">Connect agents</b><br><span data-i18n="step.3.d">Generate per-platform entries from the same authoritative Skill.</span></div></div>
+          <div class="step-item"><div class="n">④</div><div><b data-i18n="step.4.t">Start teaching</b><br><span data-i18n="step.4.d">Tell the agent: "Use K Teach to help me learn distributed systems."</span></div></div>
         </div>
       </div>
     </div>
@@ -427,16 +431,16 @@
     <div class="wrap foot">
       <div class="col">
         <a href="#top" class="brand"><span class="k">K Teach</span></a>
-        <span style="color:var(--faint);font-size:13.5px;">让 AI 真的教会你 · 开源 · 平台中立</span>
+        <span style="color:var(--faint);font-size:13.5px;" data-i18n="foot.tagline">Let AI truly teach you · Open source · Platform-neutral</span>
       </div>
       <div class="col">
-        <div class="h">Repository</div>
-        <a href="https://github.com/kunbo928/k-teach" target="_blank" rel="noopener">GitHub 仓库</a>
-        <a href="https://github.com/kunbo928/k-teach/blob/main/README-zh.md" target="_blank" rel="noopener">中文文档</a>
-        <a href="https://github.com/kunbo928/k-teach/blob/main/README.md" target="_blank" rel="noopener">English README</a>
+        <div class="h" data-i18n="foot.repo">Repository</div>
+        <a href="https://github.com/kunbo928/k-teach" target="_blank" rel="noopener" data-i18n="foot.gh">GitHub repo</a>
+        <a href="https://github.com/kunbo928/k-teach/blob/main/README-zh.md" target="_blank" rel="noopener" data-i18n="foot.readmezh">中文文档</a>
+        <a href="https://github.com/kunbo928/k-teach/blob/main/README.md" target="_blank" rel="noopener" data-i18n="foot.readmeen">English README</a>
       </div>
       <div class="col">
-        <div class="h">License</div>
+        <div class="h" data-i18n="foot.license">License</div>
         <span style="color:var(--muted);font-size:14px;">© 2026 kunbo928</span>
         <span style="color:var(--muted);font-size:14px;">Released under MIT</span>
       </div>
@@ -444,33 +448,259 @@
   </footer>
 
 <script>
-  // scroll reveal (low motion)
+  // ---------- i18n ----------
+  const I18N = {
+    en: {
+      "doc.title": "K Teach · Field Manual — Turn any AI agent into a persistent teacher",
+      "doc.desc": "K Teach is a platform-neutral open-source Agent Skill + deterministic CLI. Built on the Field Manual design language: editorial handbook, paper reading rhythm, fine-line hierarchy, restrained green, low motion.",
+      "nav.features": "Features",
+      "nav.loop": "Teaching Loop",
+      "nav.outputs": "Outputs",
+      "nav.tech": "Tech Stack",
+      "nav.install": "Quick Start",
+      "hero.h1": "Turn any AI agent<br>into a <span class=\"u\">persistent, mission-driven</span> teacher",
+      "hero.intro": "K Teach is an open-source skill and deterministic CLI that follows the open Agent Skills format. It uses a structured teaching loop, a single-source Lesson Bundle mechanism, and cross-session evidence tracking to make AI truly teach you — not just answer you.",
+      "cta.start": "⚡ Get Started",
+      "cta.github": "View on GitHub",
+      "excerpt.cap": "Manual Excerpt — 01 · Initialize",
+      "stat.1": "Channel outputs: Web · PPT · WeChat",
+      "stat.2": "Mission &amp; evidence across sessions",
+      "stat.3": "Single-source Lesson Bundle",
+      "stat.4": "No secrets stored · private by default",
+      "feat.kicker": "Core Features",
+      "feat.title": "Not just answers,<br>but teaching",
+      "feat.lede": "K Teach breaks teaching into verifiable, traceable, reproducible steps, so the AI teacher has a mission, a rhythm, and evidence — like a human teacher.",
+      "f.01.t": "Mission-driven teaching",
+      "f.01.d": "Establish an observable learning mission and success criteria first, then design each “smallest useful challenge” around it.",
+      "f.02.t": "Single-source Lesson Bundle",
+      "f.02.d": "Explanations, exercises, feedback, and retrieval rules are stored as one authoritative source; channel outputs are only derived from it.",
+      "f.03.t": "Evidence-driven learning",
+      "f.03.d": "We only record “demonstrated learning” when the learner explains, retrieves, applies, transfers, or corrects.",
+      "f.04.t": "Persistent across sessions",
+      "f.04.d": "The learning workspace keeps the mission, content, evidence, and teaching decisions across sessions — pick up where you left off.",
+      "f.05.t": "Strict safety boundaries",
+      "f.05.d": "No credentials in storage, local lessons private by default, public publishing requires confirmation, artifacts immutable after release.",
+      "f.06.t": "Platform-neutral",
+      "f.06.d": "SKILL.md is a platform-neutral contract shared by Codex / ChatGPT / Claude / any agent.",
+      "loop.kicker": "Teaching Loop",
+      "loop.title": "A complete, repeatable teaching loop",
+      "loop.lede": "From mission to evidence, an eight-step tight loop. Each step is verifiable by the CLI and traceable to the Lesson Bundle.",
+      "s.01.t": "Set the learning mission",
+      "s.01.d": "Define concrete goals and observable success criteria so teaching has direction.",
+      "s.02.t": "Assess prior knowledge &amp; preferences",
+      "s.02.d": "Check existing knowledge, learning records, trusted sources, and study habits.",
+      "s.03.t": "Pick the smallest useful challenge",
+      "s.03.d": "Choose a task slightly above the current level that you can start right away.",
+      "s.04.t": "Verify facts against trusted sources",
+      "s.04.d": "Validate every factual claim against authoritative primary sources — no fabrication.",
+      "s.05.t": "Build the Lesson Bundle",
+      "s.05.d": "Focus on a single lesson’s capability: activate prior knowledge → explain → practice → feedback → retrieval without looking back.",
+      "s.06.t": "Choose teaching media",
+      "s.06.d": "Text, deterministic SVG diagrams, or optional generated visuals — combine as needed.",
+      "s.07.t": "Resolve intent &amp; generate",
+      "s.07.d": "When intent is unclear, ask first: learning / WeChat / PPT — each derived independently.",
+      "s.08.t": "Record demonstrated learning",
+      "s.08.d": "Write evidence back to the learning record to drive the next round of content choices — the loop continues.",
+      "out.kicker": "Multi-channel Output",
+      "out.title": "One course, three outputs",
+      "out.lede": "Web lessons, HTML presentations, and WeChat articles are all deterministically derived from the same Lesson Bundle — consistent facts, traceable sources.",
+      "out.web.t": "Web Lessons",
+      "out.web.d": "A local static learning site; every lesson opens independently, with exercises and retrieval checks.",
+      "out.web.1": "Complete learning experience, offline-ready",
+      "out.web.2": "7 switchable Teaching Themes",
+      "out.web.3": "paper / night / print display modes",
+      "out.ppt.t": "HTML Presentation",
+      "out.ppt.d": "Derived from a Presentation Brief, with keyboard navigation and presenter notes.",
+      "out.ppt.1": "Classroom teaching / talk dual use",
+      "out.ppt.2": "Keyboard navigation + presenter notes",
+      "out.ppt.3": "Shares visual themes with Web",
+      "out.wx.t": "WeChat Article",
+      "out.wx.d": "Derived from a Publication Brief, requires explicit authorization, platform-safe expression.",
+      "out.wx.1": "Independent Channel Theme",
+      "out.wx.2": "Draft / preview / publish state machine",
+      "out.wx.3": "No exercises, stays platform-compliant",
+      "tech.kicker": "Tech Stack",
+      "tech.title": "Built for reproducibility",
+      "tech.lede": "TypeScript source, deterministic CLI, open Agent Skills format — stable, verifiable, easy to publish.",
+      "install.kicker": "Quick Start",
+      "install.title": "Three commands to start a learning project",
+      "install.lede": "Install the persistent CLI globally, initialize a Learning Project, and let AI take over the teaching.",
+      "code.c1": "# 1. Install the persistent CLI globally",
+      "code.c2": "# 2. Enter your project and initialize",
+      "code.c3": "# 3. Specify agents and first Teach (optional)",
+      "code.c4": "# Local preview (binds 127.0.0.1 only)",
+      "copy": "Copy",
+      "copy.done": "Copied",
+      "step.1.t": "Install CLI",
+      "step.1.d": "Install k-teach globally to get deterministic commands and preview.",
+      "step.2.t": "Initialize project",
+      "step.2.d": "Generate .k-teach/config.yaml, the teachs/ collection, and an initial Teach.",
+      "step.3.t": "Connect agents",
+      "step.3.d": "Generate per-platform entries from the same authoritative Skill.",
+      "step.4.t": "Start teaching",
+      "step.4.d": "Tell the agent: “Use K Teach to help me learn distributed systems.”",
+      "foot.tagline": "Let AI truly teach you · Open source · Platform-neutral",
+      "foot.repo": "Repository",
+      "foot.gh": "GitHub repo",
+      "foot.readmezh": "Chinese docs",
+      "foot.readmeen": "English README",
+      "foot.license": "License",
+      "mode.aria": "Toggle paper / night mode"
+    },
+    zh: {
+      "doc.title": "K Teach · Field Manual — 让任何 AI 智能体成为持久的老师",
+      "doc.desc": "K Teach 是一个平台中立的开源 Agent Skill + 确定性 CLI。基于 Field Manual 设计语言：编辑式手册、纸面节奏、细线层级、克制绿、低动效。",
+      "nav.features": "特性",
+      "nav.loop": "教学循环",
+      "nav.outputs": "多端输出",
+      "nav.tech": "技术栈",
+      "nav.install": "快速开始",
+      "hero.h1": "把任意 AI 智能体<br>变成<span class=\"u\">持久、使命驱动</span>的老师",
+      "hero.intro": "K Teach 是一个遵循开放 Agent Skills 格式的开源技能 + 确定性 CLI。它用结构化教学循环、Lesson Bundle 单源机制和跨会话证据追踪，让 AI 真正「教会」你，而不只是回答你。",
+      "cta.start": "⚡ 立即开始",
+      "cta.github": "在 GitHub 查看",
+      "excerpt.cap": "Manual Excerpt — 01 · 初始化",
+      "stat.1": "端输出：Web · PPT · 公众号",
+      "stat.2": "跨会话保留使命与证据",
+      "stat.3": "Lesson Bundle 单源",
+      "stat.4": "凭据入库 · 默认私有",
+      "feat.kicker": "核心特性",
+      "feat.title": "不只是「回答」，<br>而是「教会」",
+      "feat.lede": "K Teach 把教学拆成可验证、可追踪、可复现的环节，让 AI 老师像人类老师一样有使命、有节奏、有证据。",
+      "f.01.t": "使命驱动教学",
+      "f.01.d": "先确立可观测的学习使命与成功标准，再围绕它设计每节「最小有用挑战」。",
+      "f.02.t": "Lesson Bundle 单源",
+      "f.02.d": "讲解、练习、反馈、检索规则统一存为权威源；渠道产物只能由它派生。",
+      "f.03.t": "证据驱动学习",
+      "f.03.d": "仅当学习者解释、检索、应用、迁移或纠正时，才记录「已论证学习」。",
+      "f.04.t": "跨会话持久",
+      "f.04.d": "学习工作空间跨会话保留使命、内容、证据与教学决策，续上进度继续教。",
+      "f.05.t": "严格安全边界",
+      "f.05.d": "凭据不入库、本地课程默认私有、公开发布需确认、产物发布后不可变。",
+      "f.06.t": "平台中立",
+      "f.06.d": "SKILL.md 是平台中立契约，Codex / ChatGPT / Claude / 任意智能体共用。",
+      "loop.kicker": "教学循环",
+      "loop.title": "一个完整、可循环的教学闭环",
+      "loop.lede": "从使命到证据，八步紧凑循环。每一步都可被 CLI 验证、被 Lesson Bundle 追溯。",
+      "s.01.t": "确立学习使命",
+      "s.01.d": "定义具体目标与可观测的成功标准，让教学有方向。",
+      "s.02.t": "评估先验与偏好",
+      "s.02.d": "检查已有知识、学习记录、可信来源与学习习惯。",
+      "s.03.t": "选取最小有用挑战",
+      "s.03.d": "选择略高于当前水平、又能即刻上手的任务。",
+      "s.04.t": "基于可信源核实事实",
+      "s.04.d": "从权威原始来源校验每一个事实声明，杜绝编造。",
+      "s.05.t": "构建 Lesson Bundle",
+      "s.05.d": "聚焦单课能力：激活先验 → 精讲 → 实践 → 反馈 → 无回顾检索。",
+      "s.06.t": "选择教学媒介",
+      "s.06.d": "文本、确定性 SVG 图表，或可选生成式视觉，按需组合。",
+      "s.07.t": "判定用途并生成",
+      "s.07.d": "意图不明先问清：学习 / 微信 / PPT，三者各自独立派生。",
+      "s.08.t": "记录已论证学习",
+      "s.08.d": "把证据写回学习记录，驱动下一轮内容选择，循环继续。",
+      "out.kicker": "多端输出",
+      "out.title": "同一份课程，三端同生",
+      "out.lede": "Web 课程、HTML PPT、公众号文章都从同一个 Lesson Bundle 确定性派生，事实一致、来源可追溯。",
+      "out.web.t": "Web 课程",
+      "out.web.d": "本地静态学习网站，每节课可独立打开，含练习与检索检查。",
+      "out.web.1": "完整学习体验，离线可用",
+      "out.web.2": "7 套 Teaching Themes 可切换",
+      "out.web.3": "paper / night / print 显示模式",
+      "out.ppt.t": "HTML 演示",
+      "out.ppt.d": "从 Presentation Brief 派生，含键盘导航与讲者备注。",
+      "out.ppt.1": "课堂教学 / 讲座分享双用途",
+      "out.ppt.2": "键盘导航 + 讲者备注",
+      "out.ppt.3": "与 Web 共享视觉主题",
+      "out.wx.t": "公众号文章",
+      "out.wx.d": "从 Publication Brief 派生，需显式授权，平台安全表达。",
+      "out.wx.1": "独立 Channel Theme",
+      "out.wx.2": "草稿 / 预览 / 发布状态机",
+      "out.wx.3": "不含练习，保持平台合规",
+      "tech.kicker": "技术栈",
+      "tech.title": "为可复现而生",
+      "tech.lede": "TypeScript 源码、确定性 CLI、开放 Agent Skills 格式——稳定、可校验、易发布。",
+      "install.kicker": "快速开始",
+      "install.title": "三行命令，开启学习项目",
+      "install.lede": "全局安装持久 CLI，初始化 Learning Project，即可让 AI 接管教学。",
+      "code.c1": "# 1. 全局安装持久 CLI",
+      "code.c2": "# 2. 进入学习项目并初始化",
+      "code.c3": "# 3. 指定 Agent 与首门 Teach（可选）",
+      "code.c4": "# 本地预览（仅绑定 127.0.0.1）",
+      "copy": "复制",
+      "copy.done": "已复制",
+      "step.1.t": "安装 CLI",
+      "step.1.d": "全局安装 k-teach，获得确定性命令与预览能力。",
+      "step.2.t": "初始化项目",
+      "step.2.d": "生成 .k-teach/config.yaml、teachs/ 集合与初始 Teach。",
+      "step.3.t": "接入 Agent",
+      "step.3.d": "从同一份权威 Skill 生成各平台入口。",
+      "step.4.t": "开始教学",
+      "step.4.d": "对 Agent 说：「用 K Teach 帮我学分布式系统」。",
+      "foot.tagline": "让 AI 真的教会你 · 开源 · 平台中立",
+      "foot.repo": "资料库",
+      "foot.gh": "GitHub 仓库",
+      "foot.readmezh": "中文文档",
+      "foot.readmeen": "英文 README",
+      "foot.license": "License",
+      "mode.aria": "切换纸面 / 夜间模式"
+    }
+  };
+
+  const root = document.documentElement;
+  const langLabel = document.getElementById('langLabel');
+
+  function applyLang(lang) {
+    const dict = I18N[lang] || I18N.en;
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const key = el.getAttribute('data-i18n');
+      if (dict[key] != null) el.innerHTML = dict[key];
+    });
+    document.querySelectorAll('[data-aria-i18n]').forEach((el) => {
+      const key = el.getAttribute('data-aria-i18n');
+      if (dict[key] != null) el.setAttribute('aria-label', dict[key]);
+    });
+    document.title = dict['doc.title'];
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute('content', dict['doc.desc']);
+    if (langLabel) langLabel.textContent = lang === 'en' ? 'EN' : '中文';
+    root.setAttribute('lang', lang);
+    try { localStorage.setItem('kteach-lang', lang); } catch (_) {}
+  }
+
+  let lang = 'en';
+  try { lang = localStorage.getItem('kteach-lang') || 'en'; } catch (_) {}
+  applyLang(lang);
+  document.getElementById('langToggle').addEventListener('click', () => {
+    lang = lang === 'en' ? 'zh' : 'en';
+    applyLang(lang);
+  });
+
+  // ---------- scroll reveal (low motion) ----------
   const io = new IntersectionObserver((entries) => {
     entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
   }, { threshold: 0.1 });
   document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 
-  // copy buttons
+  // ---------- copy buttons ----------
   document.querySelectorAll('.copy-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const text = btn.getAttribute('data-copy');
       try { await navigator.clipboard.writeText(text); } catch (_) {}
       const old = btn.textContent;
-      btn.classList.add('done'); btn.textContent = '已复制';
+      btn.classList.add('done'); btn.textContent = I18N[lang]['copy.done'];
       setTimeout(() => { btn.classList.remove('done'); btn.textContent = old; }, 1800);
     });
   });
 
-  // Display Mode toggle (paper / night) — honors Field Manual Display Modes
-  const root = document.documentElement;
+  // ---------- Display Mode toggle (paper / night) ----------
   const toggle = document.getElementById('modeToggle');
-  const label = document.getElementById('modeLabel');
+  const modeLabel = document.getElementById('modeLabel');
   const saved = localStorage.getItem('kteach-mode');
-  if (saved) { root.setAttribute('data-mode', saved); label.textContent = saved === 'paper' ? 'Paper' : 'Night'; }
+  if (saved) { root.setAttribute('data-mode', saved); modeLabel.textContent = saved === 'paper' ? 'Paper' : 'Night'; }
   toggle.addEventListener('click', () => {
     const next = root.getAttribute('data-mode') === 'night' ? 'paper' : 'night';
     root.setAttribute('data-mode', next);
-    label.textContent = next === 'paper' ? 'Paper' : 'Night';
+    modeLabel.textContent = next === 'paper' ? 'Paper' : 'Night';
     localStorage.setItem('kteach-mode', next);
   });
 </script>
