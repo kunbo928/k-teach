@@ -40,8 +40,9 @@ jobs:
           version: pnpm changeset version
           commit: "chore: release package"
           title: "chore: release package"
-          # Releases are created by .github/workflows/github-release.yml on tag
-          # push, so the changesets action must not also create GitHub Releases.
+          # Releases are created below (and by .github/workflows/github-release.yml
+          # on manual/user tag pushes), so the changesets action must not also
+          # create GitHub Releases.
           createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -51,3 +52,30 @@ jobs:
       - name: Push release tag
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: git push --follow-tags
+      - name: Create GitHub Release
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          awk -v ver="$VERSION" '
+            BEGIN { capture = 0 }
+            /^## / {
+              if (capture) exit
+              if ($0 == "## " ver) { capture = 1; next }
+            }
+            capture { print }
+          ' CHANGELOG.md > release_body.md
+          if [ ! -s release_body.md ]; then
+            {
+              echo "## Changes"
+              echo ""
+              echo "_No CHANGELOG.md entry was found for this version._"
+            } > release_body.md
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; skipping."
+          else
+            gh release create "$TAG" --title "v${VERSION}" --notes-file release_body.md
+          fi
