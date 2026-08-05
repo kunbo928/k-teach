@@ -43,8 +43,13 @@ jobs:
           # on manual/user tag pushes), so the changesets action must not also
           # create GitHub Releases.
           createGithubReleases: false
+          # Author the release PR with a write-access token (ACTIONS_PAT) so the
+          # CI run is not put into `action_required` (the github-actions bot has
+          # no write access, which otherwise deadlocks the required checks).
+          # Falls back to GITHUB_TOKEN if the secret is unset.
+          token: ${{ secrets.ACTIONS_PAT || secrets.GITHUB_TOKEN }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ACTIONS_PAT || secrets.GITHUB_TOKEN }}
       - name: Publish prepared package
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: pnpm release
@@ -54,7 +59,7 @@ jobs:
       - name: Create GitHub Release
         if: steps.changesets.outputs.hasChangesets == 'false'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ACTIONS_PAT || secrets.GITHUB_TOKEN }}
         run: |
           VERSION="$(node -p "require('./package.json').version")"
           TAG="v${VERSION}"
