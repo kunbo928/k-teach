@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createReadStream, watch as fsWatch,                } from "node:fs";
+import { createReadStream, readdirSync, statSync } from "node:fs";
 import { access, chmod, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer,                     } from "node:http";
 import path from "node:path";
@@ -178,43 +178,65 @@ function previewPlugin(
   };
 }
 
-// We intentionally do not use vite's built-in chokidar watcher here. On
-// Windows + Node 24 / libuv 2.x, a chokidar watcher aborts the process with
-// a libuv "_wcsnicmp" assertion when a watched directory is removed or
-// renamed (the fs-event handle fires after the directory it was rooted at
-// is gone). The native fs.watch watcher emits an "error" event instead of
-// aborting, so the "preview exits diagnostically when its temporary project
-// root disappears" test can complete without bringing the runner down.
+// We use a polling tree scan instead of a native file watcher. On
+// Windows + Node 24 / libuv 2.x, both vite's chokidar watcher and node's
+// recursive fs.watch are backed by libuv's uv_fs_event, which aborts the
+// process with a "_wcsnicmp" assertion when the watched directory is removed
+// or renamed (the fs-event handle fires after its root directory is gone).
+// A polling scan holds no native handle on any directory, so deleting the
+// project root can never crash the runner, and the "preview exits
+// diagnostically when its temporary project root disappears" test passes.
+
+
 function startInputWatcher(
   options                       ,
   state                                                     ,
-)            {
-  let pending                                           ;
-  const trigger = (absoluteFile        ) => {
-    const outputMarker = path.sep + ".k-teach" + path.sep + "output" + path.sep;
-    const gitMarker = path.sep + ".git" + path.sep;
-    if (absoluteFile.includes(outputMarker)) return;
-    if (absoluteFile.includes(gitMarker)) return;
-    if (pending) clearTimeout(pending);
-    pending = setTimeout(() => {
-      void (options.onInputChange?.(absoluteFile) ?? Promise.resolve()).then(() => {
-        state.lastError = undefined;
-        state.revision += 1;
-      }).catch((error         ) => {
-        state.lastError = error instanceof Error ? error.message : String(error);
-        state.revision += 1;
-      });
-    }, 160);
+)               {
+  const signatureOf = ()         => {
+    const parts           = [];
+    const walk = (dir        )       => {
+      let entries;
+      try {
+        entries = readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (entry.name === ".git") continue;
+        const absolute = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === "output" && dir.endsWith(".k-teach")) continue;
+          walk(absolute);
+        } else if (entry.isFile()) {
+          try {
+            parts.push(absolute + ":" + statSync(absolute).mtimeMs);
+          } catch {
+            /* ignore unreadable files */
+          }
+        }
+      }
+    };
+    try {
+      walk(options.projectRoot);
+    } catch {
+      return "";
+    }
+    return parts.sort().join("|");
   };
-  const watcher = fsWatch(options.projectRoot, { recursive: true, persistent: false }, (_event, filename) => {
-    if (!filename) return;
-    const absolute = path.isAbsolute(filename) ? filename : path.join(options.projectRoot, filename.toString());
-    trigger(absolute);
-  });
-  // On Windows, a deleted/renamed root dir fires an "error" event instead of aborting.
-  // Swallow it; the root monitor in startPreviewRuntime handles shutdown.
-  watcher.on("error", () => {});
-  return watcher;
+  let last = signatureOf();
+  const timer = setInterval(() => {
+    const current = signatureOf();
+    if (current === "" || current === last) return;
+    last = current;
+    void (options.onInputChange?.(options.projectRoot) ?? Promise.resolve()).then(() => {
+      state.lastError = undefined;
+      state.revision += 1;
+    }).catch((error         ) => {
+      state.lastError = error instanceof Error ? error.message : String(error);
+      state.revision += 1;
+    });
+  }, 300);
+  return { close: () => clearInterval(timer) };
 }
 
 async function probe(port        , host        )                                               {
@@ -332,10 +354,8 @@ export async function startPreviewRuntime(options                       )       
     if (closing) return closing;
     closing = (async () => {
       clearInterval(rootMonitor);
-      // Close the native fs watcher first so any pending ReadDirectoryChangesW
-      // callbacks are dropped before vite tears down. On Windows, chokidar would
-      // abort the process here; node:fs instead emits an error event that we
-      // already swallow above.
+      // Stop the polling input watcher before vite tears down. The poller holds
+      // no native fs handle, so there is no Windows libuv fs-event abort risk.
       fsWatcher.close();
       await vite?.close();
       await new Promise      ((resolve, reject) => http.close((error) => error ? reject(error) : resolve()));
