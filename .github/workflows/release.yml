@@ -40,18 +40,14 @@ jobs:
           version: pnpm changeset version
           commit: "chore: release package"
           title: "chore: release package"
-          # Releases are created by .github/workflows/github-release.yml on tag push,
-          # so the changesets action must not also create GitHub Releases.
+          # Releases are created by .github/workflows/github-release.yml on tag
+          # push, so the changesets action must not also create GitHub Releases.
           createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish prepared package
         if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          pnpm release || echo "npm publish skipped or failed; continuing to tag the release"
-          TAG="k-teach@$(node -p "require('./package.json').version")"
-          git tag -f "$TAG"
-          git push origin "$TAG"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm release
+      - name: Push release tag
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: git push --follow-tags
