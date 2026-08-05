@@ -1,0 +1,37 @@
+name: Approve release workflow runs
+
+# The Changesets release PR (`changeset-release/main`) is authored by the
+# github-actions bot, which has no write access. GitHub therefore puts the
+# `Cross-platform CI` run for that PR into `action_required` (no jobs execute),
+# so the required status checks never report and the release PR can never be
+# merged. This workflow approves that pending run so the checks actually run.
+#
+# Self-contained: it uses the built-in GITHUB_TOKEN (actions: write) and needs
+# no PAT/secret. It only acts on `changeset-release/*` head branches.
+on:
+  workflow_run:
+    workflows: ["Cross-platform CI"]
+    types: [requested]
+
+permissions:
+  actions: write
+
+jobs:
+  approve:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.head_branch == 'changeset-release/main' ||
+      startsWith(github.event.workflow_run.head_branch, 'changeset-release/')
+    steps:
+      - name: Approve the pending workflow run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          CONCLUSION="$(gh api "repos/${{ github.repository }}/actions/runs/${RUN_ID}" --jq '.conclusion')"
+          if [ "$CONCLUSION" = "action_required" ]; then
+            gh api -X POST "repos/${{ github.repository }}/actions/runs/${RUN_ID}/approve"
+            echo "Approved workflow run ${RUN_ID} (was action_required)."
+          else
+            echo "Run ${RUN_ID} conclusion is '${CONCLUSION}', not action_required; nothing to do."
+          fi
