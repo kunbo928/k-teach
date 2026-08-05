@@ -62,15 +62,17 @@ export const CLI_VERSION = "__K_TEACH_PACKAGE_VERSION__";
 async function chooseTools(
   projectRoot: string,
   toolsValue: string | undefined,
+  yes = false,
 ) {
   if (toolsValue !== undefined) return selectTools(toolsValue);
   const detected = await detectedTools(projectRoot);
+  if (yes) return detected;
   if (!stdin.isTTY || !stdout.isTTY) {
     if (detected.length > 0) return detected;
     throw new KTeachError(
       "validation-failed",
       "No Agent tools were detected.",
-      "Pass --tools all, --tools none, or a comma-separated tool list.",
+      "Pass --tools all, --tools none, --yes to install to detected Agents, or a comma-separated tool list.",
     );
   }
   const detectedIds = new Set(detected.map((tool) => tool.value));
@@ -219,7 +221,8 @@ export async function main(args: string[]): Promise<number> {
       const targetArg = args[1]?.startsWith("-") ? undefined : args[1];
       const projectRoot = path.resolve(process.cwd(), targetArg ?? ".");
       const toolsValue = option(args, "--tools");
-      const tools = await chooseTools(projectRoot, toolsValue);
+      const yes = args.includes("--yes") || args.includes("-y");
+      const tools = await chooseTools(projectRoot, toolsValue, yes);
       const wechatAccount = await chooseInitialWechatAccount(
         option(args, "--wechat-account"),
       );
@@ -228,7 +231,9 @@ export async function main(args: string[]): Promise<number> {
         option(args, "--teach") ?? "main",
         wechatAccount,
       );
-      await installAgentIntegrations(projectRoot, tools, CLI_VERSION);
+      await installAgentIntegrations(projectRoot, tools, CLI_VERSION, {
+        copy: args.includes("--copy"),
+      });
       process.stdout.write("Learning Project, initial Teach, and Agent Integrations created.\n");
       if (process.env.npm_command === "exec") {
         process.stdout.write(
@@ -281,7 +286,9 @@ export async function main(args: string[]): Promise<number> {
           "Run k-teach init --tools <tools> first.",
         );
       }
-      await installAgentIntegrations(projectRoot, tools, CLI_VERSION);
+      await installAgentIntegrations(projectRoot, tools, CLI_VERSION, {
+        copy: args.includes("--copy"),
+      });
       process.stdout.write("K Teach Agent Integrations updated.\n");
       return 0;
     }

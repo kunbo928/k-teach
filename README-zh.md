@@ -120,6 +120,13 @@ k-teach init --tools codex,claude --teach mathematics
 k-teach teach create photography
 ```
 
+交互式 `init` 会预勾选所有已检测到的 Agent。传入 `--yes`（或 `-y`）可跳过
+选择步骤，直接为所有检测到的 Agent 安装。Skill 会先作为规范副本安装到
+`.agents/skills/k-teach`（Codex、Cursor、Gemini CLI、OpenCode、GitHub Copilot
+读取的位置），其余 Agent 各生成一个指向该副本的符号链接。在符号链接不可用
+的环境中传入 `--copy` 可改为生成独立副本。只要项目里存在 `.workbuddy`，
+WorkBuddy 就会被自动检测并安装。
+
 如果用户级账号表中只有一个微信公众号账号，`init` 会把它的 alias 作为
 `wechat_account` 写入 `.k-teach/config.yaml`。存在多个账号时，交互式
 `init` 只选择一次项目默认账号；非交互环境使用

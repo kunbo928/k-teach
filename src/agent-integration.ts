@@ -1,4 +1,15 @@
-import { access, cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import {
+  access,
+  cp,
+  lstat,
+  mkdir,
+  readFile,
+  rm,
+  stat,
+  symlink,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -73,7 +84,23 @@ export const AGENT_TOOLS: readonly AgentTool[] = [
   { name: "Trae", value: "trae", skillsDir: ".trae" },
   { name: "Windsurf", value: "windsurf", skillsDir: ".windsurf" },
   { name: "ZCode", value: "zcode", skillsDir: ".zcode" },
+  {
+    name: "WorkBuddy",
+    value: "workbuddy",
+    skillsDir: ".workbuddy",
+    detectionPaths: [".workbuddy"],
+  },
 ];
+
+// Canonical install location shared by every Agent that reads `.agents/skills`
+// (Codex, Cursor, Gemini CLI, OpenCode, GitHub Copilot) and used as the single
+// source of truth for the per-Agent symlinks created by installAgentIntegrations.
+export const CANONICAL_SKILLS_DIR = ".agents";
+export const CANONICAL_SKILL_NAME = "k-teach";
+
+export function canonicalSkillRoot(projectRoot: string): string {
+  return path.resolve(projectRoot, CANONICAL_SKILLS_DIR, "skills", CANONICAL_SKILL_NAME);
+}
 
 const packageRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -179,10 +206,26 @@ async function writeIfChanged(target: string, content: string): Promise<void> {
   await writeFile(target, content, "utf8");
 }
 
+export interface InstallOptions {
+  /** Copy the canonical Skill into each Agent directory instead of symlinking. */
+  copy?: boolean;
+}
+
+async function removeLinkOrDir(target: string): Promise<void> {
+  const info = await lstat(target).catch(() => undefined);
+  if (!info) return;
+  if (info.isSymbolicLink() || info.isFile()) {
+    await unlink(target);
+  } else {
+    await rm(target, { recursive: true, force: true });
+  }
+}
+
 export async function installAgentIntegrations(
   projectRoot: string,
   tools: readonly AgentTool[],
   version: string,
+  opts: InstallOptions = {},
 ): Promise<void> {
   if (
     path.basename(path.dirname(projectRoot)) === "teachs" ||
@@ -194,45 +237,61 @@ export async function installAgentIntegrations(
       "Run k-teach init or update from the Learning Project root.",
     );
   }
-  const sourceSkill = await readFile(path.join(packageRoot, "SKILL.md"), "utf8");
-  for (const tool of tools) {
-    const target = path.resolve(
-      projectRoot,
-      tool.skillsDir,
-      "skills",
-      "k-teach",
+  if (tools.length === 0) return;
+
+  const canonical = canonicalSkillRoot(projectRoot);
+  if (path.relative(projectRoot, canonical).startsWith("..")) {
+    throw new KTeachError(
+      "validation-failed",
+      "Unsafe canonical Agent Skill path.",
+      "Review the vendored Agent registry.",
     );
-    const relative = path.relative(projectRoot, target);
-    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+  }
+
+  const sourceSkill = await readFile(path.join(packageRoot, "SKILL.md"), "utf8");
+  await mkdir(canonical, { recursive: true });
+  await writeIfChanged(
+    path.join(canonical, "SKILL.md"),
+    generatedSkill(sourceSkill, version),
+  );
+  for (const directory of ["references", "agents"]) {
+    await cp(path.join(packageRoot, directory), path.join(canonical, directory), {
+      recursive: true,
+      force: true,
+    });
+  }
+  for (const directory of ["lesson-bundle", "publication-brief", "visuals"]) {
+    const source = path.join(packageRoot, "assets", directory);
+    if ((await stat(source).catch(() => undefined))?.isDirectory()) {
+      await cp(source, path.join(canonical, "assets", directory), {
+        recursive: true,
+        force: true,
+      });
+    }
+  }
+
+  for (const tool of tools) {
+    const toolSkills = path.resolve(projectRoot, tool.skillsDir, "skills");
+    if (path.relative(projectRoot, toolSkills).startsWith("..")) {
       throw new KTeachError(
         "validation-failed",
         `Unsafe Agent Integration path for ${tool.value}.`,
         "Review the vendored Agent registry.",
       );
     }
-    await mkdir(target, { recursive: true });
-    await writeIfChanged(
-      path.join(target, "SKILL.md"),
-      generatedSkill(sourceSkill, version),
-    );
-    for (const directory of ["references", "agents"]) {
-      await cp(path.join(packageRoot, directory), path.join(target, directory), {
-        recursive: true,
-        force: true,
-      });
+    const linkTarget = path.join(toolSkills, CANONICAL_SKILL_NAME);
+    // Agents whose Skills directory IS `.agents` read the canonical copy
+    // directly, so no symlink is needed.
+    if (path.resolve(projectRoot, tool.skillsDir) === path.resolve(projectRoot, CANONICAL_SKILLS_DIR)) {
+      continue;
     }
-    for (const directory of [
-      "lesson-bundle",
-      "publication-brief",
-      "visuals",
-    ]) {
-      const source = path.join(packageRoot, "assets", directory);
-      if ((await stat(source).catch(() => undefined))?.isDirectory()) {
-        await cp(source, path.join(target, "assets", directory), {
-          recursive: true,
-          force: true,
-        });
-      }
+    await mkdir(toolSkills, { recursive: true });
+    await removeLinkOrDir(linkTarget);
+    if (opts.copy) {
+      await cp(canonical, linkTarget, { recursive: true, force: true });
+    } else {
+      const relative = path.relative(toolSkills, canonical);
+      await symlink(relative, linkTarget);
     }
   }
 }
