@@ -1,5 +1,11 @@
 # k-teach
 
+## 1.1.0
+
+### Minor Changes
+
+- 3ab5188: Align `k-teach init` with `npx skills add`: install a single canonical Skill copy under `.agents/skills/k-teach` and symlink each detected Agent to it; add `--yes`/`-y` (skip selection, install to all detected Agents) and `--copy` (independent copies instead of symlinks) flags; add WorkBuddy support (auto-detected via `.workbuddy`).
+
 ## 1.0.1
 
 ### Patch Changes
