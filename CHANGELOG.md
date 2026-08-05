@@ -1,5 +1,11 @@
 # k-teach
 
+## 1.1.1
+
+### Patch Changes
+
+- e052cfc: test: verify release automation auto-approve (will be closed, not published)
+
 ## 1.1.0
 
 ### Minor Changes
