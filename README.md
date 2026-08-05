@@ -1,6 +1,8 @@
 # K Teach
 
-English · [简体中文](README-zh.md)
+English · [简体中文](README-zh.md) · **[Website](https://kunbo928.github.io/k-teach/)**
+
+> The official site (GitHub Pages) is a single-file, Field Manual–styled intro page. Source: `index.html` at the repo root.
 
 K Teach is an Agent Skill for turning an AI agent into a persistent,
 mission-driven teacher. It helps the agent understand what you want to learn,
