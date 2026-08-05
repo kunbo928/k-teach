@@ -261,7 +261,10 @@ test("init --yes installs detected Agents through .agents/skills canonical symli
   assert.equal((await stat(canonical)).isFile(), true);
   const link = path.join(project, ".codex", "skills", "k-teach");
   assert.equal((await lstat(link)).isSymbolicLink(), true);
-  assert.equal(await readlink(link), "../../.agents/skills/k-teach");
+  assert.equal(
+    path.normalize(await readlink(link)),
+    path.normalize("../../.agents/skills/k-teach"),
+  );
   assert.equal(
     await readFile(path.join(link, "SKILL.md"), "utf8"),
     await readFile(canonical, "utf8"),
@@ -293,7 +296,10 @@ test("init --yes detects WorkBuddy when .workbuddy exists", async () => {
   assert.equal(result.exitCode, 0, result.stderr);
   const link = path.join(project, ".workbuddy", "skills", "k-teach");
   assert.equal((await lstat(link)).isSymbolicLink(), true);
-  assert.equal(await readlink(link), "../../.agents/skills/k-teach");
+  assert.equal(
+    path.normalize(await readlink(link)),
+    path.normalize("../../.agents/skills/k-teach"),
+  );
   assert.equal((await stat(path.join(link, "SKILL.md"))).isFile(), true);
 });
 
