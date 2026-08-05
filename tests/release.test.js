@@ -69,7 +69,11 @@ test("Changesets release workflow separates release PRs from OIDC publishing", a
   assert.match(workflow, /id:\s*changesets/);
   assert.match(workflow, /uses:\s*changesets\/action@v1/);
   assert.match(workflow, /version:\s*pnpm changeset version/);
-  assert.match(workflow, /GITHUB_TOKEN:\s*\$\{\{\s*secrets\.GITHUB_TOKEN\s*\}\}/);
+  assert.match(
+    workflow,
+    /GITHUB_TOKEN:\s*\$\{\{\s*secrets\.ACTIONS_PAT \|\| secrets\.GITHUB_TOKEN\s*\}\}/,
+  );
+  assert.match(workflow, /ACTIONS_PAT/);
   assert.match(
     workflow,
     /if:\s*steps\.changesets\.outputs\.hasChangesets == 'false'/,
