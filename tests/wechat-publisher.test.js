@@ -47,7 +47,7 @@ async function fixture() {
       generator: "k-teach-wechat-v2",
       generated_at: "brief-r1",
       lesson: { id: "lesson", revision: "lesson-r1" },
-      design_profile: { id: "classic-manual", revision: "1" },
+      design_profile: { id: "field-manual", revision: "1" },
       artifact_revision: "artifact-r1",
       publication_brief: {
         id: "public-lesson",

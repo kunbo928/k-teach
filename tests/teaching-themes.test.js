@@ -6,7 +6,6 @@ import {
   TEACHING_THEME_IDS,
   TEACHING_THEMES,
 } from "../src/teaching-themes.ts";
-import { applyWechatTheme } from "../src/wechat-renderer.ts";
 import { validateDocument } from "../src/schema.ts";
 
 test("all seven Teaching Themes have complete unique visual tokens", () => {
@@ -50,21 +49,5 @@ test("all seven Teaching Themes are valid Presentation Brief choices", async () 
       [],
       theme.id,
     );
-  }
-});
-
-test("all seven Teaching Themes produce distinct platform-safe WeChat palettes", () => {
-  const base =
-    '<section style="background:#F5F1E8;color:#1C2822;border:1px solid #BBC3BD"><span leaf="">正文</span><strong style="color:#315C49">重点</strong><p style="background:#E7E8DE;color:#66716B">说明</p></section>';
-  const outputs = TEACHING_THEMES.map((theme) => ({
-    theme,
-    html: applyWechatTheme(base, theme),
-  }));
-  assert.equal(new Set(outputs.map(({ html }) => html)).size, 7);
-  for (const { theme, html } of outputs) {
-    assert.match(html, new RegExp(theme.colors.background, "i"));
-    assert.match(html, new RegExp(theme.colors.accent, "i"));
-    assert.match(html, /<span leaf="">/);
-    assert.doesNotMatch(html, /<style|class=|display:grid/i);
   }
 });

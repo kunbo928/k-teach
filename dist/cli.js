@@ -2,21 +2,17 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { access, readFile, readdir } from "node:fs/promises";
 import { stdin, stdout } from "node:process";
-import { parse } from "yaml";
 
 import { KTeachError } from "./errors.js";
+import { createContextPacket } from "./context-packet.js";
 import { resolveConfig } from "./config.js";
 import { validateLessonBundles } from "./lesson-bundle.js";
 import { startPreviewRuntime } from "./preview-runtime.js";
-import { renderWeb } from "./web-renderer.js";
 import { renderDiagram } from "./diagram-renderer.js";
 import { registerVisualAsset } from "./visuals.js";
-import { renderWechat, renderWechatProposals } from "./wechat-renderer.js";
-import { renderPptFromBrief } from "./ppt-renderer.js";
 import {
   confirmInteractivePublish,
   createWechatDraft,
-  createOrReuseAuthorizedWechatDraft,
   doctorWechat,
   previewWechatDraft,
   publishWechatDraft,
@@ -24,7 +20,6 @@ import {
   readWechatAttempt,
   resolveWechatCredentials,
 
-  WechatDraftAttentionRequired,
 } from "./wechat-publisher.js";
 import {
   assertWorkspaceIsCurrent,
@@ -46,18 +41,14 @@ import { searchableMultiSelect } from "./searchable-multi-select.js";
 import { TEACHING_THEME_IDS } from "./teaching-themes.js";
 import { addWechatAccount, markWechatAccountSuccessful, maskedAppId, readWechatAccounts, requireWechatAccount } from "./wechat-accounts.js";
 import { userConfigDir } from "./user-paths.js";
-import { createContextPacket } from "./context-packet.js";
-import { GenerationAttentionRequired, runGeneration } from "./generation-run.js";
-import { stageAndPromoteArtifact } from "./artifact-pipeline.js";
-import { loadSemanticPlan } from "./semantic-plan.js";
+import {
+  loadRoutePlan,
+  prepareRoutePacket,
+  promoteRouteArtifact,
+  runGenerationRoute,
+} from "./generation-route.js";
 
-async function validateStagedArtifact(output        , manifestName        )                {
-  const manifest = JSON.parse(await readFile(path.join(output, manifestName), "utf8"))                                     ;
-  if (!manifest.id || !Array.isArray(manifest.files)) throw new KTeachError("render-failed", "Artifact manifest is incomplete.", "Correct the route renderer contract.");
-  for (const file of manifest.files) await access(path.join(output, file));
-}
-
-export const CLI_VERSION = "1.0.1";
+export const CLI_VERSION = "1.1.0";
 
 async function chooseTools(
   projectRoot        ,
@@ -351,66 +342,23 @@ export async function main(args          )                  {
       await assertWorkspaceIsCurrent(workspaceRoot);
       const briefId = option(args, "--brief");
       const draftRequested = args.includes("--draft");
-      let lessonId = option(args, "--lesson");
+      const lessonId = option(args, "--lesson");
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const config = await resolveConfig({ cwd: configRoot, userConfigDir: userConfigDir() });
-      const value = await runGeneration({
+      const value = await runGenerationRoute({
         root: workspaceRoot,
         intent,
         lessonId,
         briefId,
         version: CLI_VERSION,
+        outputDirectory: config.output_dir,
         deliveryMode: draftRequested ? "draft" : undefined,
-        createContext: async () => {
-          if (draftRequested && intent !== "wechat") throw new KTeachError("validation-failed", "--draft is supported only for the WeChat intent.", "Remove --draft or use --intent wechat.");
-          if (intent !== "learn" && briefId) {
-            const directory = intent === "ppt" ? "presentations" : "publications";
-            const brief = parse(await readFile(path.join(workspaceRoot, directory, `${briefId}.yaml`), "utf8"))                          ;
-            lessonId = brief.lesson_id;
-          }
-          return createContextPacket(workspaceRoot, intent, lessonId , briefId);
-        },
-        render: async (packet, plan) => {
-          if (intent === "learn") {
-            const output = await stageAndPromoteArtifact({
-              root: workspaceRoot, outputDirectory: config.output_dir, relativeArtifact: "web",
-              render: (staging) => renderWeb(workspaceRoot, staging, { lessonId }),
-              validate: (staged) => validateStagedArtifact(staged, "artifact-manifest.json"),
-            });
-            const manifest = JSON.parse(await readFile(path.join(output, "artifact-manifest.json"), "utf8"))                  ;
-            return manifest.id;
-          }
-          if (intent === "ppt") {
-            if (!plan || plan.kind !== "slide") throw new KTeachError("validation-failed", "A current Slide Plan is required.", "Review the generated Plan and rerun.");
-            const output = await stageAndPromoteArtifact({
-              root: workspaceRoot, outputDirectory: config.output_dir, relativeArtifact: path.join("ppt", briefId ),
-              render: (staging) => renderPptFromBrief(workspaceRoot, briefId , staging, plan, packet),
-              validate: (staged) => validateStagedArtifact(staged, "manifest.json"),
-            });
-            return (JSON.parse(await readFile(path.join(output, "manifest.json"), "utf8"))                  ).id;
-          }
-          if (!plan || plan.kind !== "article") throw new KTeachError("validation-failed", "A current Article Plan is required.", "Review the generated Plan and rerun.");
-          const output = await stageAndPromoteArtifact({
-            root: workspaceRoot, outputDirectory: config.output_dir, relativeArtifact: path.join("wechat", briefId ),
-            render: (staging) => renderWechat(workspaceRoot, briefId , staging, { plan, packet }),
-            validate: (staged) => validateStagedArtifact(staged, "manifest.json"),
-          });
-          return (JSON.parse(await readFile(path.join(output, "manifest.json"), "utf8"))                  ).id;
-        },
-        deliver: draftRequested ? async () => {
-          const artifactDir = path.resolve(workspaceRoot, config.output_dir, "wechat", briefId );
-          const manifest = JSON.parse(await readFile(path.join(artifactDir, "manifest.json"), "utf8"))                                                                                                 ;
-          const authorization = manifest.publication_brief?.draft_delivery;
-          if (authorization?.authorized !== true || !authorization.account_alias) throw new KTeachError("validation-failed", "The current Publication Brief has no account-scoped draft authorization.", "Add draft_delivery authorization or omit --draft.");
-          try {
-            const attempt = await createOrReuseAuthorizedWechatDraft(artifactDir, await publisherOptions(workspaceRoot, authorization.account_alias));
-            await markWechatAccountSuccessful(authorization.account_alias);
-            return attempt.id;
-          } catch (error) {
-            if (error instanceof WechatDraftAttentionRequired) throw new GenerationAttentionRequired(error.attemptId);
-            throw error;
-          }
-        } : undefined,
+        draftDelivery: draftRequested
+          ? {
+              resolvePublisher: (accountAlias) => publisherOptions(workspaceRoot, accountAlias),
+              markAccountSuccessful: markWechatAccountSuccessful,
+            }
+          : undefined,
       });
       process.stdout.write(args.includes("--json") ? `${JSON.stringify(value)}\n` : `${value.state}: ${value.run_id}\n`);
       return value.state === "failed" || value.state === "attention_required" ? 2 : 0;
@@ -423,7 +371,11 @@ export async function main(args          )                  {
         cwd: configRoot,
         userConfigDir: userConfigDir(),
       });
-      const output = await renderWeb(workspaceRoot, config.output_dir);
+      const output = await promoteRouteArtifact({
+        root: workspaceRoot,
+        outputDirectory: config.output_dir,
+        intent: "learn",
+      });
       process.stdout.write(`Web course rendered to ${output}\n`);
       return 0;
     }
@@ -446,11 +398,16 @@ export async function main(args          )                  {
       await assertWorkspaceIsCurrent(workspaceRoot);
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const config = await resolveConfig({ cwd: configRoot, userConfigDir: userConfigDir() });
-      const briefValue = parse(await readFile(path.join(workspaceRoot, "presentations", `${brief}.yaml`), "utf8"))                         ;
-      const packet = await createContextPacket(workspaceRoot, "ppt", briefValue.lesson_id, brief);
-      const plan = await loadSemanticPlan(workspaceRoot, "slide", brief);
-      if (!plan || plan.kind !== "slide") throw new KTeachError("validation-failed", "No current Slide Plan exists for this Brief.", "Run generate --intent ppt --brief <id> --json and review the scaffold.");
-      const output = await renderPptFromBrief(workspaceRoot, brief, config.output_dir, plan, packet);
+      const packet = await prepareRoutePacket(workspaceRoot, "ppt", brief);
+      const plan = await loadRoutePlan(workspaceRoot, "ppt", brief);
+      const output = await promoteRouteArtifact({
+        root: workspaceRoot,
+        outputDirectory: config.output_dir,
+        intent: "ppt",
+        briefId: brief,
+        plan,
+        packet,
+      });
       process.stdout.write(`HTML PPT rendered to ${output}\n`);
       return 0;
     }
@@ -514,13 +471,17 @@ export async function main(args          )                  {
         cwd: configRoot,
         userConfigDir: userConfigDir(),
       });
-      const briefValue = parse(await readFile(path.join(workspaceRoot, "publications", `${brief}.yaml`), "utf8"))                         ;
-      const packet = await createContextPacket(workspaceRoot, "wechat", briefValue.lesson_id, brief);
-      const plan = await loadSemanticPlan(workspaceRoot, "article", brief);
-      if (!plan || plan.kind !== "article") throw new KTeachError("validation-failed", "No current Article Plan exists for this Brief.", "Run generate --intent wechat --brief <id> --json and review the scaffold.");
-      const output = args[1] === "render-proposals"
-        ? await renderWechatProposals(workspaceRoot, brief, config.output_dir, plan, packet)
-        : await renderWechat(workspaceRoot, brief, config.output_dir, { plan, packet });
+      const packet = await prepareRoutePacket(workspaceRoot, "wechat", brief);
+      const plan = await loadRoutePlan(workspaceRoot, "wechat", brief);
+      const output = await promoteRouteArtifact({
+        root: workspaceRoot,
+        outputDirectory: config.output_dir,
+        intent: "wechat",
+        briefId: brief,
+        plan,
+        packet,
+        proposals: args[1] === "render-proposals",
+      });
       process.stdout.write(`WeChat ${args[1] === "render-proposals" ? "theme proposals" : "article"} rendered to ${output}\n`);
       return 0;
     }
@@ -645,7 +606,11 @@ export async function main(args          )                  {
             return {
               ...teach,
               artifactRoot: path.resolve(teach.root, config.output_dir),
-              root: await renderWeb(teach.root, config.output_dir),
+              root: await promoteRouteArtifact({
+                root: teach.root,
+                outputDirectory: config.output_dir,
+                intent: "learn",
+              }),
             };
           }),
       );
@@ -660,22 +625,46 @@ export async function main(args          )                  {
             return relative === "" || (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`));
           });
           for (const teach of affected) {
-            await renderWeb(teach.root, config.output_dir);
+            await promoteRouteArtifact({
+              root: teach.root,
+              outputDirectory: config.output_dir,
+              intent: "learn",
+            });
             const presentationIds = await readdir(path.join(teach.root, "presentations")).then((files) => files.filter((name) => name.endsWith(".yaml")).map((name) => name.slice(0, -5)), () => []);
             for (const id of presentationIds) {
-              const brief = parse(await readFile(path.join(teach.root, "presentations", `${id}.yaml`), "utf8"))                         ;
-              const plan = await loadSemanticPlan(teach.root, "slide", id);
-              if (plan?.kind === "slide") await renderPptFromBrief(teach.root, id, config.output_dir, plan, await createContextPacket(teach.root, "ppt", brief.lesson_id, id));
+              try {
+                const plan = await loadRoutePlan(teach.root, "ppt", id);
+                const packet = await prepareRoutePacket(teach.root, "ppt", id);
+                await promoteRouteArtifact({
+                  root: teach.root,
+                  outputDirectory: config.output_dir,
+                  intent: "ppt",
+                  briefId: id,
+                  plan,
+                  packet,
+                });
+              } catch {
+                // Preview refresh skips Briefs that are not ready to promote.
+              }
             }
             const publicationIds = await readdir(path.join(teach.root, "publications")).then((files) => files.filter((name) => name.endsWith(".yaml")).map((name) => name.slice(0, -5)), () => []);
             for (const id of publicationIds) {
               const proposals = path.resolve(teach.root, config.output_dir, "wechat", id, "proposals.html");
-              const brief = parse(await readFile(path.join(teach.root, "publications", `${id}.yaml`), "utf8"))                         ;
-              const plan = await loadSemanticPlan(teach.root, "article", id);
-              if (plan?.kind !== "article") continue;
-              const packet = await createContextPacket(teach.root, "wechat", brief.lesson_id, id);
-              if (await access(proposals).then(() => true, () => false)) await renderWechatProposals(teach.root, id, config.output_dir, plan, packet);
-              else await renderWechat(teach.root, id, config.output_dir, { plan, packet });
+              try {
+                const plan = await loadRoutePlan(teach.root, "wechat", id);
+                const packet = await prepareRoutePacket(teach.root, "wechat", id);
+                await promoteRouteArtifact({
+                  root: teach.root,
+                  outputDirectory: config.output_dir,
+                  intent: "wechat",
+                  briefId: id,
+                  plan,
+                  packet,
+                  proposals: await access(proposals).then(() => true, () => false),
+                });
+              } catch {
+                // Preview refresh skips Briefs that are not ready to promote.
+              }
             }
           }
         },
