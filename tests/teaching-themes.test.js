@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  emitPptThemeCss,
+  emitWebTeachingThemesCss,
   resolveTeachingTheme,
   TEACHING_THEME_IDS,
   TEACHING_THEMES,
@@ -24,9 +26,28 @@ test("all seven Teaching Themes have complete unique visual tokens", () => {
     assert.match(theme.colors.surface, /^#[0-9A-F]{6}$/i);
     assert.match(theme.colors.ink, /^#[0-9A-F]{6}$/i);
     assert.match(theme.colors.accent, /^#[0-9A-F]{6}$/i);
+    assert.match(theme.colors.accentInk, /^#[0-9A-F]{6}$/i);
+    assert.match(theme.colors.accentSoft, /^#[0-9A-F]{6}$/i);
     assert.ok(theme.display.length > 8);
-    assert.ok(theme.radius.length > 1);
+    assert.ok(theme.radius.length >= 1);
+    assert.ok(theme.surface);
   }
+});
+
+test("Teaching Theme catalog emits Web and PPT styles from one source", () => {
+  const web = emitWebTeachingThemesCss();
+  const ppt = emitPptThemeCss();
+  for (const theme of TEACHING_THEMES) {
+    assert.match(web, new RegExp(`data-teaching-theme="${theme.id}"`));
+    assert.match(web, new RegExp(theme.colors.accent.toLowerCase(), "i"));
+    assert.match(ppt, new RegExp(`data-theme="${theme.id}"`));
+    assert.match(ppt, new RegExp(theme.colors.accent, "i"));
+    if (theme.pptChrome) assert.match(ppt, new RegExp(theme.id));
+  }
+  assert.match(web, /data-theme="night"/);
+  assert.match(web, /@media print/);
+  assert.match(web, /\.teaching-theme-select/);
+  assert.match(ppt, /storybook.*slide::before|slide::before.*storybook/s);
 });
 
 test("all seven Teaching Themes are valid Presentation Brief choices", async () => {

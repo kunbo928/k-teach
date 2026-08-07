@@ -41,4 +41,16 @@ for (const file of sourceFiles) {
   );
 }
 
+const { emitWebTeachingThemesCss } = await import(
+  path.join(outputRoot, "teaching-themes.js")
+);
+const teachingThemesCss = path.join(
+  packageRoot,
+  "assets",
+  "field-manual",
+  "teaching-themes.css",
+);
+await mkdir(path.dirname(teachingThemesCss), { recursive: true });
+await writeFile(teachingThemesCss, emitWebTeachingThemesCss(), "utf8");
+
 process.stderr.write(`Built ${sourceFiles.length} modules in dist/.\n`);

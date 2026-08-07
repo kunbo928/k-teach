@@ -15,6 +15,7 @@ import {
   type Exercise,
 } from "./lesson-bundle.ts";
 import {
+  emitPptThemeCss,
   resolveTeachingTheme,
   TEACHING_THEMES,
   type TeachingTheme,
@@ -189,23 +190,6 @@ async function prepareMedia(
   return result;
 }
 
-function themeCss(): string {
-  return TEACHING_THEMES.map(
-    (theme) => `[data-theme="${theme.id}"]{
-      --bg:${theme.colors.background};
-      --surface:${theme.colors.surface};
-      --ink:${theme.colors.ink};
-      --muted:${theme.colors.muted};
-      --line:${theme.colors.line};
-      --accent:${theme.colors.accent};
-      --accent-soft:${theme.colors.accentSoft};
-      --code:${theme.colors.code};
-      --display:${theme.display};
-      --radius:${theme.radius};
-    }`,
-  ).join("\n");
-}
-
 function slideMarkup(slide: Slide, index: number): string {
   return `<section class="slide layout-${slide.layout}" data-slide="${index}" aria-label="Slide ${index + 1}">
     <div class="slide-chrome"><span>${escapeHtml(slide.eyebrow)}</span><span>${String(index + 1).padStart(2, "0")}</span></div>
@@ -245,10 +229,9 @@ function deckHtml(
   <title>${escapeHtml(lesson.title)} · K Teach</title>
   <style>
     :root{--sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
-    ${themeCss()}
+    ${emitPptThemeCss()}
     *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);font-family:var(--sans);color:var(--ink);overflow:hidden}.deck{width:100vw;height:100vh;display:grid;place-items:center}
     .slide{display:none;position:relative;width:min(100vw,177.78vh);aspect-ratio:16/9;overflow:hidden;background:var(--surface);padding:5.5% 6.5%;border-radius:var(--radius);box-shadow:0 24px 80px #0004}.slide.is-active{display:block;animation:enter .42s cubic-bezier(.2,.8,.2,1)}@keyframes enter{from{opacity:0;transform:translateY(14px) scale(.992)}to{opacity:1;transform:none}}.slide::after{content:"";position:absolute;right:-7%;bottom:-18%;width:35%;aspect-ratio:1;border-radius:50%;background:var(--accent-soft);opacity:.7}
-    [data-theme="storybook"] .slide::before{content:"";position:absolute;inset:3% 3% auto auto;width:18%;height:11%;border-radius:50%;background:var(--accent-soft);box-shadow:-4rem 2rem 0 var(--accent-soft)}[data-theme="nature-explorer"] .slide::before{content:"✦  OBSERVE  ·  CLASSIFY  ·  DISCOVER";position:absolute;right:6%;bottom:5%;color:var(--accent);font-size:.8vw;letter-spacing:.12em}[data-theme="active-classroom"] .slide{border:3px solid var(--ink);box-shadow:10px 10px 0 var(--accent)}[data-theme="active-classroom"] .slide h2{transform:rotate(-.5deg)}[data-theme="junior-lab"] .slide{background-image:linear-gradient(#9dbbc426 1px,transparent 1px),linear-gradient(90deg,#9dbbc426 1px,transparent 1px);background-size:28px 28px}[data-theme="editorial-desk"] .slide h2{border-block:4px double var(--ink);padding-block:.18em}[data-theme="future-lab"] .slide{background-image:linear-gradient(#35d0ba12 1px,transparent 1px),linear-gradient(90deg,#35d0ba12 1px,transparent 1px);background-size:40px 40px;box-shadow:0 0 0 1px var(--accent),0 24px 80px #0008}
     .slide-chrome{position:absolute;left:6.5%;right:6.5%;top:4%;display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:.7%;font-size:clamp(9px,1vw,15px);font-weight:800;letter-spacing:.16em;color:var(--accent)}.slide-content{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;justify-content:center}
     .slide h2{max-width:82%;margin:0 0 3%;font-family:var(--display);font-size:clamp(30px,5vw,76px);line-height:.98;letter-spacing:-.035em}.slide-body{max-width:88%;font-size:clamp(14px,1.55vw,25px);line-height:1.55}.slide-body p{margin:0 0 1em}.slide-body ul,.slide-body ol{display:grid;gap:.55em;margin:.4em 0;padding-left:1.3em}.slide-body li::marker{color:var(--accent);font-weight:800}.slide-body strong{color:var(--accent)}.slide-body code{padding:.08em .3em;background:var(--accent-soft);border-radius:.2em}.slide-body pre{max-height:28vh;overflow:auto;padding:1em 1.2em;background:#14221c;color:#edf5ef;border-radius:.25em;font-size:.72em}.slide-body blockquote{margin:.4em 0;padding:.8em 1em;border-left:.3em solid var(--accent);background:var(--accent-soft);font-family:var(--display);font-size:1.15em}
     figure{margin:.8em 0;display:grid;justify-items:center}figure img{display:block;max-width:100%;max-height:31vh;object-fit:contain}figcaption{margin-top:.4em;color:var(--muted);font-size:.7em}.media-fallback{display:inline-block;padding:.7em 1em;border:1px solid var(--line);color:var(--muted)}.layout-cover h2{max-width:88%;font-size:clamp(42px,7vw,110px)}.mission{max-width:65%;font-family:var(--display);font-size:1.35em}.objectives{display:flex;flex-wrap:wrap;gap:.5em}.objectives span{padding:.45em .75em;border:1px solid var(--line);background:var(--accent-soft);font-size:.75em}
