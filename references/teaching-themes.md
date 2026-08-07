@@ -34,11 +34,8 @@ preference is stored by stable Teach ID and overrides `theme_default`. “恢复
 clears that preference. Invalid or missing values fall back to
 `classic-manual`.
 
-For a WeChat Publication Brief, set:
-
-```yaml
-theme: editorial-desk
-```
+WeChat Article does not use Teaching Themes. Set `channel_theme` on the
+Publication Brief; see [wechat-rendering.md](wechat-rendering.md).
 
 For a PPT, record the theme in its Presentation Brief and run:
 

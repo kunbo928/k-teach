@@ -26,17 +26,7 @@
       "additionalProperties": false,
       "required": ["id", "revision"],
       "properties": {
-        "id": {
-          "enum": [
-            "classic-manual",
-            "storybook",
-            "nature-explorer",
-            "active-classroom",
-            "junior-lab",
-            "editorial-desk",
-            "future-lab"
-          ]
-        },
+        "id": { "const": "field-manual" },
         "revision": { "const": "1" }
       }
     },

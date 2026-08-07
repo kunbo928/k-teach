@@ -74,11 +74,11 @@ It defaults to paper tokens, provides a page-wide night theme, and always uses a
 fixed light print theme. Core content, exercises, answer disclosures, sources,
 and static fallbacks remain readable without JavaScript.
 
-The shared Teaching Theme catalog contains `classic-manual`, `storybook`,
-`nature-explorer`, `active-classroom`, `junior-lab`, `editorial-desk`, and
-`future-lab`. Web, WeChat, and PPT renderers consume the same IDs and visual
-tokens. Theme selection changes presentation only and never mutates Lesson
-Bundle content or learning evidence.
+The seven Teaching Themes (see [teaching-themes.md](references/teaching-themes.md))
+apply to Web Lesson and HTML PPT. WeChat Article uses independent Channel Themes
+(see [wechat-rendering.md](references/wechat-rendering.md)). Theme selection
+changes presentation only and never mutates Lesson Bundle content or learning
+evidence.
 
 ## Publication
 
