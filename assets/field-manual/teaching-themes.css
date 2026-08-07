@@ -81,7 +81,7 @@
 
 :root[data-teaching-theme="junior-lab"] {
   --paper: #edf5f7;
-  --surface: #fdfeff;
+  --surface: #fdfefe;
   --ink: #102e3b;
   --muted: #54707b;
   --line: #9dbbc4;
@@ -127,11 +127,11 @@
   --line: #345363;
   --accent: #35d0ba;
   --accent-ink: #071815;
+  --code: #101e2c;
+  --display: "Avenir Next", "PingFang SC", sans-serif;
   --success: #52d89e;
   --warning: #e2b55f;
   --danger: #ff8077;
-  --code: #101e2c;
-  --display: "Avenir Next", "PingFang SC", sans-serif;
   --theme-radius: 6px;
   --theme-shadow: 0 0 0 1px #35d0ba24, 0 16px 36px #00000040;
   --theme-pattern:
@@ -155,36 +155,36 @@
 :root[data-theme="night"][data-teaching-theme="storybook"] {
   --paper: #241a1a;
   --surface: #302321;
-  --accent: #ff9a8f;
   --line: #684a45;
+  --accent: #ff9a8f;
 }
 
 :root[data-theme="night"][data-teaching-theme="nature-explorer"] {
   --paper: #131d15;
   --surface: #1b281d;
-  --accent: #9bc28a;
   --line: #415c43;
+  --accent: #9bc28a;
 }
 
 :root[data-theme="night"][data-teaching-theme="active-classroom"] {
   --paper: #10182a;
   --surface: #18243a;
-  --accent: #7eabff;
   --line: #3c547c;
+  --accent: #7eabff;
 }
 
 :root[data-theme="night"][data-teaching-theme="junior-lab"] {
   --paper: #0b1c24;
   --surface: #132a34;
-  --accent: #58d2df;
   --line: #37606a;
+  --accent: #58d2df;
 }
 
 :root[data-theme="night"][data-teaching-theme="editorial-desk"] {
   --paper: #171514;
   --surface: #211e1c;
-  --accent: #e0776f;
   --line: #5b5550;
+  --accent: #e0776f;
 }
 
 body {
@@ -207,43 +207,6 @@ body {
 .exercise,
 .lesson-figure {
   overflow: hidden;
-}
-
-:root[data-teaching-theme="storybook"] .lesson-hero,
-:root[data-teaching-theme="nature-explorer"] .lesson-hero {
-  border: var(--theme-border) solid var(--line);
-  border-radius: var(--theme-radius);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  padding-inline: clamp(1.4rem, 5vw, 4rem);
-}
-
-:root[data-teaching-theme="active-classroom"] .lesson-kicker,
-:root[data-teaching-theme="junior-lab"] .lesson-kicker,
-:root[data-teaching-theme="future-lab"] .lesson-kicker {
-  width: fit-content;
-  border: 1px solid var(--accent);
-  border-radius: 999px;
-  padding: 0.25rem 0.65rem;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-:root[data-teaching-theme="editorial-desk"] .lesson-content > p:first-of-type {
-  font-family: var(--display);
-  font-size: var(--step-1);
-}
-
-:root[data-teaching-theme="editorial-desk"] h2 {
-  border-block: 3px double var(--ink);
-  padding-block: 0.35em;
-  text-transform: uppercase;
-}
-
-:root[data-teaching-theme="future-lab"] .exercise,
-:root[data-teaching-theme="future-lab"] .lesson-figure {
-  backdrop-filter: blur(8px);
 }
 
 .theme-controls {
@@ -303,4 +266,67 @@ body {
     --theme-pattern: none;
     --theme-shadow: none;
   }
+}
+
+:root[data-teaching-theme="storybook"] .lesson-hero {
+  border: var(--theme-border) solid var(--line);
+  border-radius: var(--theme-radius);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  padding-inline: clamp(1.4rem, 5vw, 4rem);
+}
+
+:root[data-teaching-theme="nature-explorer"] .lesson-hero {
+  border: var(--theme-border) solid var(--line);
+  border-radius: var(--theme-radius);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  padding-inline: clamp(1.4rem, 5vw, 4rem);
+}
+
+:root[data-teaching-theme="active-classroom"] .lesson-kicker {
+  width: fit-content;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+:root[data-teaching-theme="junior-lab"] .lesson-kicker {
+  width: fit-content;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+:root[data-teaching-theme="editorial-desk"] .lesson-content > p:first-of-type {
+  font-family: var(--display);
+  font-size: var(--step-1);
+}
+
+:root[data-teaching-theme="editorial-desk"] h2 {
+  border-block: 3px double var(--ink);
+  padding-block: 0.35em;
+  text-transform: uppercase;
+}
+
+:root[data-teaching-theme="future-lab"] .lesson-kicker {
+  width: fit-content;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+:root[data-teaching-theme="future-lab"] .exercise,
+:root[data-teaching-theme="future-lab"] .lesson-figure {
+  backdrop-filter: blur(8px);
 }
