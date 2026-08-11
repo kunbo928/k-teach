@@ -1,5 +1,12 @@
 # k-teach
 
+## 1.2.0
+
+### Minor Changes
+
+- ada8b08: Deepen Generation Run behind `runGenerationRoute` so generate, diagnostic render, and preview share stage/validate/promote; give WeChat Article its own Channel Theme tokens and recipes instead of aliasing Teaching Themes, and record Design Profile as `field-manual` on WeChat manifests.
+- 93c1e20: Make the Teaching Theme TypeScript catalog the single source for Web and PPT tokens/chrome, emit `teaching-themes.css` at build time, and share PPT theme CSS through the same module.
+
 ## 1.1.0
 
 ### Minor Changes
