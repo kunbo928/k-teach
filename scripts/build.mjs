@@ -1,7 +1,7 @@
 import { readdir, readFile, rm, mkdir, writeFile } from "node:fs/promises";
 import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = path.join(packageRoot, "src");
@@ -42,7 +42,7 @@ for (const file of sourceFiles) {
 }
 
 const { emitWebTeachingThemesCss } = await import(
-  path.join(outputRoot, "teaching-themes.js")
+  pathToFileURL(path.join(outputRoot, "teaching-themes.js")).href
 );
 const teachingThemesCss = path.join(
   packageRoot,
