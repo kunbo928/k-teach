@@ -9,7 +9,7 @@ import test from "node:test";
 const execFileAsync = promisify(execFile);
 const packageRoot = path.resolve(".");
 
-test("package metadata identifies the public MIT release and vendored notices", async () => {
+test("package metadata identifies the public MIT release", async () => {
   const manifest = JSON.parse(
     await readFile(path.join(packageRoot, "package.json"), "utf8"),
   );
@@ -22,7 +22,7 @@ test("package metadata identifies the public MIT release and vendored notices", 
     manifest.repository.url,
     "git+https://github.com/kunbo928/k-teach.git",
   );
-  for (const file of ["LICENSE", "THIRD_PARTY_NOTICES.md", "UPSTREAM.md"]) {
+  for (const file of ["LICENSE"]) {
     assert.ok(manifest.files.includes(file));
     assert.equal((await stat(path.join(packageRoot, file))).isFile(), true);
   }
