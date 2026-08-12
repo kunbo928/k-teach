@@ -23,7 +23,6 @@ export interface AgentTool {
   setupNote?: string;
 }
 
-// Vendored from Fission-AI/OpenSpec at fc886af7f93068482bbf2c66fd1eb76b40c6a22f.
 export const AGENT_TOOLS: readonly AgentTool[] = [
   { name: "Amazon Q Developer", value: "amazon-q", skillsDir: ".amazonq" },
   { name: "Antigravity", value: "antigravity", skillsDir: ".agent" },
@@ -244,7 +243,7 @@ export async function installAgentIntegrations(
     throw new KTeachError(
       "validation-failed",
       "Unsafe canonical Agent Skill path.",
-      "Review the vendored Agent registry.",
+      "Review the K Teach Agent registry.",
     );
   }
 
@@ -276,7 +275,7 @@ export async function installAgentIntegrations(
       throw new KTeachError(
         "validation-failed",
         `Unsafe Agent Integration path for ${tool.value}.`,
-        "Review the vendored Agent registry.",
+        "Review the K Teach Agent registry.",
       );
     }
     const linkTarget = path.join(toolSkills, CANONICAL_SKILL_NAME);

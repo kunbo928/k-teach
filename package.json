@@ -9,8 +9,6 @@
   "files": [
     "README-zh.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md",
-    "UPSTREAM.md",
     "SKILL.md",
     "agents",
     "assets",

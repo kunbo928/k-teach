@@ -30,8 +30,6 @@ for (const required of [
   "dist/agent-integration.js",
   "SKILL.md",
   "LICENSE",
-  "THIRD_PARTY_NOTICES.md",
-  "UPSTREAM.md",
 ]) {
   if (!names.includes(required)) throw new Error(`Tarball missing ${required}`);
 }

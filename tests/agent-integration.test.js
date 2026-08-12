@@ -109,7 +109,7 @@ test("non-interactive init without a detected or selected Agent leaves no partia
   );
 });
 
-test("tools reports the complete Agent matrix from the pinned OpenSpec snapshot", async () => {
+test("tools reports the complete supported Agent matrix", async () => {
   const project = await mkdtemp(path.join(tmpdir(), "k-teach-tools-"));
   const expectedIds = [
     "amazon-q",
