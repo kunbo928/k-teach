@@ -1,5 +1,11 @@
 # k-teach
 
+## 1.2.1
+
+### Patch Changes
+
+- 60e9d72: Stop shipping OpenSpec/html-ppt provenance docs in the package and describe the Agent registry as K Teach's own.
+
 ## 1.2.0
 
 ### Minor Changes
