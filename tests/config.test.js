@@ -53,15 +53,15 @@ test("config rejects unknown keys and secret-shaped keys", async () => {
 
 test("default output directory follows the nearest Teach id", () => {
   assert.equal(
-    resolveTeachOutputDirectory("/project/main", "/project/teachs/main"),
-    "/project/main",
+    resolveTeachOutputDirectory(path.join("project", "main"), path.join("project", "teachs", "main")),
+    path.join("project", "main"),
   );
   assert.equal(
-    resolveTeachOutputDirectory("/project/main", "/project/teachs/alpha"),
-    "/project/alpha",
+    resolveTeachOutputDirectory(path.join("project", "main"), path.join("project", "teachs", "alpha")),
+    path.join("project", "alpha"),
   );
   assert.equal(
-    resolveTeachOutputDirectory("/custom/output", "/project/teachs/alpha"),
-    "/custom/output",
+    resolveTeachOutputDirectory(path.join("custom", "output"), path.join("project", "teachs", "alpha")),
+    path.join("custom", "output"),
   );
 });
