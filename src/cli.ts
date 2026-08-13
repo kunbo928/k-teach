@@ -5,7 +5,7 @@ import { stdin, stdout } from "node:process";
 
 import { KTeachError } from "./errors.ts";
 import { createContextPacket } from "./context-packet.ts";
-import { resolveConfig } from "./config.ts";
+import { resolveConfig, resolveTeachOutputDirectory } from "./config.ts";
 import { validateLessonBundles } from "./lesson-bundle.ts";
 import { startPreviewRuntime } from "./preview-runtime.ts";
 import { renderDiagram } from "./diagram-renderer.ts";
@@ -345,13 +345,14 @@ export async function main(args: string[]): Promise<number> {
       const lessonId = option(args, "--lesson");
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const config = await resolveConfig({ cwd: configRoot, userConfigDir: userConfigDir() });
+      const outputDirectory = resolveTeachOutputDirectory(config.output_dir, workspaceRoot);
       const value = await runGenerationRoute({
         root: workspaceRoot,
         intent,
         lessonId,
         briefId,
         version: CLI_VERSION,
-        outputDirectory: config.output_dir,
+        outputDirectory,
         deliveryMode: draftRequested ? "draft" : undefined,
         draftDelivery: draftRequested
           ? {
@@ -371,9 +372,10 @@ export async function main(args: string[]): Promise<number> {
         cwd: configRoot,
         userConfigDir: userConfigDir(),
       });
+      const outputDirectory = resolveTeachOutputDirectory(config.output_dir, workspaceRoot);
       const output = await promoteRouteArtifact({
         root: workspaceRoot,
-        outputDirectory: config.output_dir,
+        outputDirectory,
         intent: "learn",
       });
       process.stdout.write(`Web course rendered to ${output}\n`);
@@ -398,11 +400,12 @@ export async function main(args: string[]): Promise<number> {
       await assertWorkspaceIsCurrent(workspaceRoot);
       const configRoot = await resolveProjectConfigRoot(workspaceRoot);
       const config = await resolveConfig({ cwd: configRoot, userConfigDir: userConfigDir() });
+      const outputDirectory = resolveTeachOutputDirectory(config.output_dir, workspaceRoot);
       const packet = await prepareRoutePacket(workspaceRoot, "ppt", brief);
       const plan = await loadRoutePlan(workspaceRoot, "ppt", brief);
       const output = await promoteRouteArtifact({
         root: workspaceRoot,
-        outputDirectory: config.output_dir,
+        outputDirectory,
         intent: "ppt",
         briefId: brief,
         plan,
@@ -471,11 +474,12 @@ export async function main(args: string[]): Promise<number> {
         cwd: configRoot,
         userConfigDir: userConfigDir(),
       });
+      const outputDirectory = resolveTeachOutputDirectory(config.output_dir, workspaceRoot);
       const packet = await prepareRoutePacket(workspaceRoot, "wechat", brief);
       const plan = await loadRoutePlan(workspaceRoot, "wechat", brief);
       const output = await promoteRouteArtifact({
         root: workspaceRoot,
-        outputDirectory: config.output_dir,
+        outputDirectory,
         intent: "wechat",
         briefId: brief,
         plan,
@@ -603,12 +607,13 @@ export async function main(args: string[]): Promise<number> {
       const rendered = await Promise.all(
         teaches.map(async (teach) => {
             await assertWorkspaceIsCurrent(teach.root);
+            const outputDirectory = resolveTeachOutputDirectory(config.output_dir, teach.root);
             return {
               ...teach,
-              artifactRoot: config.output_dir,
+              artifactRoot: outputDirectory,
               root: await promoteRouteArtifact({
                 root: teach.root,
-                outputDirectory: config.output_dir,
+                outputDirectory,
                 intent: "learn",
               }),
             };
@@ -625,9 +630,10 @@ export async function main(args: string[]): Promise<number> {
             return relative === "" || (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`));
           });
           for (const teach of affected) {
+            const outputDirectory = resolveTeachOutputDirectory(config.output_dir, teach.root);
             await promoteRouteArtifact({
               root: teach.root,
-              outputDirectory: config.output_dir,
+              outputDirectory,
               intent: "learn",
             });
             const presentationIds = await readdir(path.join(teach.root, "presentations")).then((files) => files.filter((name) => name.endsWith(".yaml")).map((name) => name.slice(0, -5)), () => []);
@@ -637,7 +643,7 @@ export async function main(args: string[]): Promise<number> {
                 const packet = await prepareRoutePacket(teach.root, "ppt", id);
                 await promoteRouteArtifact({
                   root: teach.root,
-                  outputDirectory: config.output_dir,
+                  outputDirectory,
                   intent: "ppt",
                   briefId: id,
                   plan,
@@ -649,13 +655,13 @@ export async function main(args: string[]): Promise<number> {
             }
             const publicationIds = await readdir(path.join(teach.root, "publications")).then((files) => files.filter((name) => name.endsWith(".yaml")).map((name) => name.slice(0, -5)), () => []);
             for (const id of publicationIds) {
-              const proposals = path.resolve(config.output_dir, "wechat", id, "proposals.html");
+              const proposals = path.resolve(outputDirectory, "wechat", id, "proposals.html");
               try {
                 const plan = await loadRoutePlan(teach.root, "wechat", id);
                 const packet = await prepareRoutePacket(teach.root, "wechat", id);
                 await promoteRouteArtifact({
                   root: teach.root,
-                  outputDirectory: config.output_dir,
+                  outputDirectory,
                   intent: "wechat",
                   briefId: id,
                   plan,

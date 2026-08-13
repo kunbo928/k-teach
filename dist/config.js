@@ -130,5 +130,14 @@ export async function resolveConfig(
   };
 }
 
+export function resolveTeachOutputDirectory(
+  configuredOutput        ,
+  teachRoot        ,
+)         {
+  return path.basename(configuredOutput) === "main"
+    ? path.join(path.dirname(configuredOutput), path.basename(teachRoot))
+    : configuredOutput;
+}
+
 
 //# sourceURL=k-teach/src/config.ts

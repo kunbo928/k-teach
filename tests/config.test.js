@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { resolveConfig } from "../src/config.ts";
+import { resolveConfig, resolveTeachOutputDirectory } from "../src/config.ts";
 
 test("config precedence is CLI, workspace, user, then defaults", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "k-teach-config-"));
@@ -48,5 +48,20 @@ test("config rejects unknown keys and secret-shaped keys", async () => {
     (error) =>
       error.code === "invalid-workspace" &&
       error.context.keys.includes("app_secret"),
+  );
+});
+
+test("default output directory follows the nearest Teach id", () => {
+  assert.equal(
+    resolveTeachOutputDirectory("/project/main", "/project/teachs/main"),
+    "/project/main",
+  );
+  assert.equal(
+    resolveTeachOutputDirectory("/project/main", "/project/teachs/alpha"),
+    "/project/alpha",
+  );
+  assert.equal(
+    resolveTeachOutputDirectory("/custom/output", "/project/teachs/alpha"),
+    "/custom/output",
   );
 });
