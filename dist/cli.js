@@ -605,7 +605,7 @@ export async function main(args          )                  {
             await assertWorkspaceIsCurrent(teach.root);
             return {
               ...teach,
-              artifactRoot: path.resolve(teach.root, config.output_dir),
+              artifactRoot: config.output_dir,
               root: await promoteRouteArtifact({
                 root: teach.root,
                 outputDirectory: config.output_dir,
@@ -649,7 +649,7 @@ export async function main(args          )                  {
             }
             const publicationIds = await readdir(path.join(teach.root, "publications")).then((files) => files.filter((name) => name.endsWith(".yaml")).map((name) => name.slice(0, -5)), () => []);
             for (const id of publicationIds) {
-              const proposals = path.resolve(teach.root, config.output_dir, "wechat", id, "proposals.html");
+              const proposals = path.resolve(config.output_dir, "wechat", id, "proposals.html");
               try {
                 const plan = await loadRoutePlan(teach.root, "wechat", id);
                 const packet = await prepareRoutePacket(teach.root, "wechat", id);

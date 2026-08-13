@@ -224,10 +224,7 @@ authorized_for_publication: false
   assert.equal(result.exitCode, 0, result.stderr);
   const output = path.join(
     workspace,
-    "teachs",
     "main",
-    ".k-teach",
-    "output",
     "wechat",
     "event-loop-public",
   );

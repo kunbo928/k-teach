@@ -200,7 +200,7 @@ assets:
   assert.equal(rendered.exitCode, 0, rendered.stderr);
   const manifest = JSON.parse(
     await readFile(
-      path.join(workspace, "teachs", "main", ".k-teach", "output", "web", "artifact-manifest.json"),
+      path.join(workspace, "main", "web", "artifact-manifest.json"),
       "utf8",
     ),
   );
@@ -263,10 +263,7 @@ assets:
     await readFile(
       path.join(
         offWorkspace,
-        "teachs",
         "main",
-        ".k-teach",
-        "output",
         "web",
         "artifact-manifest.json",
       ),
