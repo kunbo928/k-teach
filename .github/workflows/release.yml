@@ -43,11 +43,12 @@ jobs:
           # on manual/user tag pushes), so the changesets action must not also
           # create GitHub Releases.
           createGithubReleases: false
-          # Author the release PR with a write-access token (ACTIONS_PAT) so the
-          # CI run is not put into `action_required` (the github-actions bot has
-          # no write access, which otherwise deadlocks the required checks).
-          # Falls back to GITHUB_TOKEN if the secret is unset.
-          token: ${{ secrets.ACTIONS_PAT || secrets.GITHUB_TOKEN }}
+          # Author the release PR with a write-access PAT so CI is not stuck in
+          # `action_required` (github-actions / default GITHUB_TOKEN lack write
+          # collaborator standing). Pass via `github-token` — `token:` is not a
+          # valid changesets/action input and was silently ignored.
+          # Falls back to GITHUB_TOKEN if ACTIONS_PAT is unset.
+          github-token: ${{ secrets.ACTIONS_PAT || secrets.GITHUB_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.ACTIONS_PAT || secrets.GITHUB_TOKEN }}
       - name: Publish prepared package
