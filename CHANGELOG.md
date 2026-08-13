@@ -1,5 +1,11 @@
 # k-teach
 
+## 1.2.2
+
+### Patch Changes
+
+- 12fa3d2: Place generated Web, PPT, WeChat, and research artifacts in the nearest user-facing `main` directory, and keep PPT generation isolated from Web output.
+
 ## 1.2.1
 
 ### Patch Changes
