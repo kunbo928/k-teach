@@ -86,6 +86,22 @@ test("runGenerationRoute is the ordinary Generation Run entry", async () => {
   await access(path.join(teach, ".k-teach", "output", "web", "artifact-manifest.json"));
 });
 
+test("project config keeps route artifacts in the nearest user-facing main directory", async () => {
+  const project = await mkdtemp(path.join(tmpdir(), "k-teach-output-owner-"));
+  const teach = await scaffoldTeach(project);
+  const generated = await runCli(
+    ["generate", "--intent", "learn", "--lesson", "demo", "--json"],
+    project,
+  );
+
+  assert.equal(generated.exitCode, 0, generated.stderr);
+  await access(path.join(project, "main", "web", "artifact-manifest.json"));
+  await assert.rejects(
+    access(path.join(teach, ".k-teach", "output", "web")),
+    { code: "ENOENT" },
+  );
+});
+
 test("promoteRouteArtifact stages and promotes diagnostic web renders", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "k-teach-promote-"));
   const teach = await scaffoldTeach(root);

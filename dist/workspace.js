@@ -7,7 +7,7 @@ import { KTeachError } from "./errors.js";
 function defaultConfig(wechatAccount         )         {
   return `schema_version: 1
 design_profile: field-manual
-output_dir: .k-teach/output
+output_dir: main
 visuals: auto
 ${wechatAccount ? `wechat_account: ${wechatAccount}\n` : ""}`;
 }
@@ -115,6 +115,7 @@ export async function initializeTeach(
   await Promise.all(
     [
       "lessons",
+      "presentations",
       "publications",
       "learning-records",
       "reference",
@@ -127,21 +128,21 @@ export async function initializeTeach(
   );
   await Promise.all(
     Object.entries(WORKSPACE_DOCUMENTS).map(async ([file, content]) => {
-      try {
-        await writeFile(path.join(teachRoot, file), content, {
-          encoding: "utf8",
-          flag: "wx",
-        });
-      } catch (error) {
-        if (
-          !error ||
-          typeof error !== "object" ||
-          !("code" in error) ||
-          error.code !== "EEXIST"
-        ) {
-          throw error;
+        try {
+          await writeFile(path.join(teachRoot, file), content, {
+            encoding: "utf8",
+            flag: "wx",
+          });
+        } catch (error) {
+          if (
+            !error ||
+            typeof error !== "object" ||
+            !("code" in error) ||
+            error.code !== "EEXIST"
+          ) {
+            throw error;
+          }
         }
-      }
     }),
   );
   return teachRoot;

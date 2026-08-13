@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -104,10 +104,7 @@ theme: { id: active-classroom, source: brief, reason: 课堂练习 }
   assert.equal(result.exitCode, 0, result.stderr);
   const output = path.join(
     workspace,
-    "teachs",
     "main",
-    ".k-teach",
-    "output",
     "ppt",
     "event-loop-deck",
   );
@@ -115,6 +112,9 @@ theme: { id: active-classroom, source: brief, reason: 课堂练习 }
   const manifest = JSON.parse(
     await readFile(path.join(output, "manifest.json"), "utf8"),
   );
+  await assert.rejects(access(path.join(workspace, "main", "web")), {
+    code: "ENOENT",
+  });
 
   assert.match(html, /aspect-ratio:16\/9/);
   assert.match(html, /data-theme="active-classroom"/);
@@ -196,10 +196,7 @@ theme: { id: ${theme.id}, source: brief, reason: 主题验证 }
     assert.equal(result.exitCode, 0, `${theme.id}: ${result.stderr}`);
     const output = path.join(
       workspace,
-      "teachs",
       "main",
-      ".k-teach",
-      "output",
       "ppt",
       briefId,
     );
@@ -284,8 +281,8 @@ theme:
     assert.equal((await runCli(command, workspace)).exitCode, 0);
     assert.equal((await runCli(command, workspace)).exitCode, 0);
   }
-  const teaching = await readFile(path.join(teach, ".k-teach", "output", "ppt", "class", "index.html"), "utf8");
-  const talk = await readFile(path.join(teach, ".k-teach", "output", "ppt", "conference", "index.html"), "utf8");
+  const teaching = await readFile(path.join(workspace, "main", "ppt", "class", "index.html"), "utf8");
+  const talk = await readFile(path.join(workspace, "main", "ppt", "conference", "index.html"), "utf8");
   assert.match(teaching, /K TEACH · TEACHING/);
   assert.match(teaching, /微任务和定时器谁先执行/);
   assert.match(teaching, /<aside class="notes">[\s\S]*当前任务结束后/);

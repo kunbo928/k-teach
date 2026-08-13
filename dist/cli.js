@@ -48,7 +48,7 @@ import {
   runGenerationRoute,
 } from "./generation-route.js";
 
-export const CLI_VERSION = "1.2.0";
+export const CLI_VERSION = "1.2.1";
 
 async function chooseTools(
   projectRoot        ,
@@ -424,7 +424,7 @@ export async function main(args          )                  {
       const output =
         outputIndex >= 0 && args[outputIndex + 1]
           ? args[outputIndex + 1]
-          : path.join(process.cwd(), ".k-teach", "output", "diagrams");
+          : path.join(process.cwd(), "main", "research", "diagrams");
       const rendered = await renderDiagram(
         path.resolve(process.cwd(), input),
         path.resolve(process.cwd(), output),

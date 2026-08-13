@@ -442,7 +442,7 @@ feedback: 当前同步任务结束后先清空微任务队列。
 
   const result = await runCli(["render", "web"], workspace);
   assert.equal(result.exitCode, 0);
-  const output = path.join(workspace, "teachs", "main", ".k-teach", "output", "web");
+  const output = path.join(workspace, "main", "web");
   const index = await readFile(path.join(output, "index.html"), "utf8");
   const page = await readFile(
     path.join(output, "lessons", "event-loop-01.html"),

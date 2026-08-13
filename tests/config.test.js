@@ -30,7 +30,7 @@ test("config precedence is CLI, workspace, user, then defaults", async () => {
   assert.deepEqual(config, {
     schema_version: 1,
     design_profile: "field-manual",
-    output_dir: "workspace-output",
+    output_dir: path.join(workspace, "workspace-output"),
     visuals: "required",
     wechat_account: "personal",
   });

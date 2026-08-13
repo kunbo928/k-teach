@@ -424,7 +424,7 @@ export async function main(args: string[]): Promise<number> {
       const output =
         outputIndex >= 0 && args[outputIndex + 1]
           ? args[outputIndex + 1]
-          : path.join(process.cwd(), ".k-teach", "output", "diagrams");
+          : path.join(process.cwd(), "main", "research", "diagrams");
       const rendered = await renderDiagram(
         path.resolve(process.cwd(), input),
         path.resolve(process.cwd(), output),
