@@ -129,3 +129,12 @@ export async function resolveConfig(
     output_dir: path.resolve(projectRoot, resolved.output_dir),
   };
 }
+
+export function resolveTeachOutputDirectory(
+  configuredOutput: string,
+  teachRoot: string,
+): string {
+  return path.basename(configuredOutput) === "main"
+    ? path.join(path.dirname(configuredOutput), path.basename(teachRoot))
+    : configuredOutput;
+}

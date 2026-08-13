@@ -68,12 +68,12 @@ test("project preview serves every Teach from one process", async (t) => {
       "schema_version: 1\nid: beta\ntitle: Beta Teach\n",
     ),
   ]);
-  await mkdir(path.join(project, "main", "ppt", "deck"), { recursive: true });
-  await mkdir(path.join(project, "main", "wechat", "article"), { recursive: true });
+  await mkdir(path.join(project, "alpha", "ppt", "deck"), { recursive: true });
+  await mkdir(path.join(project, "alpha", "wechat", "article"), { recursive: true });
   await Promise.all([
-    writeFile(path.join(project, "main", "ppt", "deck", "index.html"), "<!doctype html><title>Deck route</title>"),
-    writeFile(path.join(project, "main", "wechat", "article", "preview.html"), "<!doctype html><title>Article preview</title>"),
-    writeFile(path.join(project, "main", "wechat", "article", "proposals.html"), "<!doctype html><title>Article proposals</title>"),
+    writeFile(path.join(project, "alpha", "ppt", "deck", "index.html"), "<!doctype html><title>Deck route</title>"),
+    writeFile(path.join(project, "alpha", "wechat", "article", "preview.html"), "<!doctype html><title>Article preview</title>"),
+    writeFile(path.join(project, "alpha", "wechat", "article", "proposals.html"), "<!doctype html><title>Article proposals</title>"),
   ]);
 
   const child = spawn(process.execPath, [cliPath, "preview", "--port", "0"], {
