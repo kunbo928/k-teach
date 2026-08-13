@@ -57,7 +57,7 @@ test("project preview serves every Teach from one process", async (t) => {
   await Promise.all([
     writeFile(
       path.join(project, ".k-teach", "config.yaml"),
-      "schema_version: 1\ndesign_profile: field-manual\noutput_dir: .k-teach/output\nvisuals: auto\n",
+      "schema_version: 1\ndesign_profile: field-manual\noutput_dir: main\nvisuals: auto\n",
     ),
     writeFile(
       path.join(project, "teachs", "alpha", "teach.yaml"),
@@ -68,12 +68,12 @@ test("project preview serves every Teach from one process", async (t) => {
       "schema_version: 1\nid: beta\ntitle: Beta Teach\n",
     ),
   ]);
-  await mkdir(path.join(project, "teachs", "alpha", ".k-teach", "output", "ppt", "deck"), { recursive: true });
-  await mkdir(path.join(project, "teachs", "alpha", ".k-teach", "output", "wechat", "article"), { recursive: true });
+  await mkdir(path.join(project, "main", "ppt", "deck"), { recursive: true });
+  await mkdir(path.join(project, "main", "wechat", "article"), { recursive: true });
   await Promise.all([
-    writeFile(path.join(project, "teachs", "alpha", ".k-teach", "output", "ppt", "deck", "index.html"), "<!doctype html><title>Deck route</title>"),
-    writeFile(path.join(project, "teachs", "alpha", ".k-teach", "output", "wechat", "article", "preview.html"), "<!doctype html><title>Article preview</title>"),
-    writeFile(path.join(project, "teachs", "alpha", ".k-teach", "output", "wechat", "article", "proposals.html"), "<!doctype html><title>Article proposals</title>"),
+    writeFile(path.join(project, "main", "ppt", "deck", "index.html"), "<!doctype html><title>Deck route</title>"),
+    writeFile(path.join(project, "main", "wechat", "article", "preview.html"), "<!doctype html><title>Article preview</title>"),
+    writeFile(path.join(project, "main", "wechat", "article", "proposals.html"), "<!doctype html><title>Article proposals</title>"),
   ]);
 
   const child = spawn(process.execPath, [cliPath, "preview", "--port", "0"], {
