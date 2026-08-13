@@ -2,7 +2,7 @@
 
 Use a Diagram when spatial structure helps the learner understand a process,
 relationship, or lifecycle. Keep the spec beside the Lesson Bundle under
-`media/diagrams/`; keep rendered files under `.k-teach/output/diagrams/`.
+`media/diagrams/`; keep rendered files under `main/research/diagrams/`.
 Rendered files are derived assets and never become the content authority.
 
 ## Diagram Spec
@@ -50,7 +50,7 @@ k-teach render diagram path/to/spec.yaml
 ```
 
 Pass `--output <directory>` when the default
-`.k-teach/output/diagrams/` is not suitable. One render writes:
+`main/research/diagrams/` is not suitable. One render writes:
 
 - `<id>.svg`, with a responsive `viewBox`, semantic title and description;
 - `<id>@2x.png`, derived deterministically for channels that cannot use SVG;

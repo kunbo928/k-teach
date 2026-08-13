@@ -23,7 +23,7 @@ Only when the user explicitly asks to compare themes, use the narrow proposal
 and preview diagnostics after Generation Run completes. Keep preview alive and
 return its printed HTTP URL; do not hand off a `file://` URL.
 
-Output lives under `.k-teach/output/wechat/<brief-id>/`:
+Output lives under `main/wechat/<brief-id>/`:
 
 - `article.html`: a clean `<section>` fragment with inline styles and
   `<span leaf="">` text wrappers;

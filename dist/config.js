@@ -22,7 +22,7 @@ import { KTeachError } from "./errors.js";
 const DEFAULT_CONFIG               = {
   schema_version: 1,
   design_profile: "field-manual",
-  output_dir: ".k-teach/output",
+  output_dir: "main",
   visuals: "auto",
 };
 
@@ -121,7 +121,13 @@ export async function resolveConfig(
     ...(options.cli ?? {}),
   };
   assertConfig(resolved);
-  return resolved;
+  const projectRoot = path.basename(options.cwd) === ".k-teach"
+    ? path.dirname(options.cwd)
+    : options.cwd;
+  return {
+    ...resolved,
+    output_dir: path.resolve(projectRoot, resolved.output_dir),
+  };
 }
 
 
